@@ -1,0 +1,110 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — HabitFlow</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0fdf4;
+        }
+
+        .navbar {
+            background: white !important;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+            padding: 12px 24px;
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: 700;
+            color: #16a34a !important;
+        }
+
+        .nav-link {
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151 !important;
+        }
+
+        .btn-register {
+            background: #16a34a;
+            color: white !important;
+            border-radius: 8px;
+            padding: 8px 18px !important;
+            font-weight: 600 !important;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+            .btn-register:hover {
+                background: #15803d;
+            }
+
+        .btn-login {
+            border: 1.5px solid #16a34a;
+            color: #16a34a !important;
+            border-radius: 8px;
+            padding: 7px 18px !important;
+            font-weight: 600 !important;
+            font-size: 14px;
+        }
+
+        .btn-logout {
+            background: #f3f4f6;
+            color: #374151 !important;
+            border-radius: 8px;
+            padding: 8px 16px !important;
+            font-size: 13px;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <nav class="navbar navbar-expand-sm navbar-light">
+            <div class="container-fluid">
+                <a class="navbar-brand" asp-controller="Auth" asp-action="Register">HabitFlow</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav ms-auto align-items-center gap-2">
+                        @if (Context.Session.GetString("UserId") != null)
+                        {
+                            <li class="nav-item">
+                                <span class="nav-link">👋 @Context.Session.GetString("UserName")</span>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link btn-logout" asp-controller="Auth" asp-action="Logout">Вийти</a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link btn-login" asp-controller="Auth" asp-action="Login">Увійти</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link btn-register" asp-controller="Auth" asp-action="Register">Зареєструватись</a>
+                            </li>
+                        }
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <div>
+        @RenderBody()
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>
