@@ -18,6 +18,22 @@
 
         public string? EmailConfirmationToken { get; set; }
 
+        public string? PasswordResetToken { get; set; }
+
+        public DateTime? PasswordResetTokenExpiry { get; set; }
+
+        public bool NotificationsEnabled { get; set; } = true;
+
+        public int AvatarId { get; set; } = 1;
+
+        public bool IsOnboardingCompleted { get; set; } = false;
+
+        public string? OnboardingGoal { get; set; }
+
+        public string? OnboardingDescription { get; set; }
+
+        public string? OnboardingTime { get; set; }
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ICollection<Habit> Habits { get; set; } = new List<Habit>();

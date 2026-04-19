@@ -28,10 +28,7 @@ namespace HabitFlow.Web.Controllers
             }
 
             var confirmationLink = this.Url.Action(
-                "ConfirmEmail",
-                "Auth",
-                null,
-                this.Request.Scheme)!;
+                "ConfirmEmail", "Auth", null, this.Request.Scheme)!;
 
             var (success, error) = await this.authService.RegisterAsync(dto, confirmationLink);
 
@@ -90,7 +87,73 @@ namespace HabitFlow.Web.Controllers
             this.HttpContext.Session.SetString("UserName", user.Name);
             this.HttpContext.Session.SetString("UserEmail", user.Email);
 
+            // Якщо онбординг не пройдений — направляємо туди
+            if (!user.IsOnboardingCompleted)
+            {
+                return this.RedirectToAction("Index", "Onboarding");
+            }
+
             return this.RedirectToAction("Index", "Dashboard");
+        }
+
+        [HttpGet]
+        public IActionResult ForgotPassword()
+        {
+            return this.View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordDto dto)
+        {
+            if (!this.ModelState.IsValid)
+            {
+                return this.View(dto);
+            }
+
+            var resetLink = this.Url.Action(
+                "ResetPassword", "Auth", null, this.Request.Scheme)!;
+
+            await this.authService.ForgotPasswordAsync(dto.Email, resetLink);
+
+            return this.RedirectToAction("ForgotPasswordSuccess");
+        }
+
+        [HttpGet]
+        public IActionResult ForgotPasswordSuccess()
+        {
+            return this.View();
+        }
+
+        [HttpGet]
+        public IActionResult ResetPassword(string token, string email)
+        {
+            var dto = new ResetPasswordDto { Token = token, Email = email };
+            return this.View(dto);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> ResetPassword(ResetPasswordDto dto)
+        {
+            if (!this.ModelState.IsValid)
+            {
+                return this.View(dto);
+            }
+
+            var (success, error) = await this.authService.ResetPasswordAsync(dto);
+
+            if (!success)
+            {
+                this.ModelState.AddModelError(string.Empty, error);
+                return this.View(dto);
+            }
+
+            return this.RedirectToAction("ResetPasswordSuccess");
+        }
+
+        [HttpGet]
+        public IActionResult ResetPasswordSuccess()
+        {
+            return this.View();
         }
 
         public IActionResult Logout()

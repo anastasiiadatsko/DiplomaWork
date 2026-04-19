@@ -6,27 +6,26 @@ using HabitFlow.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
+var builder = WebApplication.CreateBuilder(args);
+
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/habitflow.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
 
-var builder = WebApplication.CreateBuilder(args);
-
 builder.Host.UseSerilog();
 
-// База даних
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("Default")));
 
-// Репозиторії
-builder.Services.AddScoped<IHabitRepository, HabitRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IHabitRepository, HabitRepository>();
+builder.Services.AddScoped<IHabitLogRepository, HabitLogRepository>();
 
-// Сервіси
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
-// Сесії
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromHours(8);
@@ -35,7 +34,6 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.AddControllersWithViews();
-builder.Services.AddScoped<IEmailService, EmailService>();
 
 var app = builder.Build();
 
@@ -54,10 +52,5 @@ app.UseAuthorization();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
-
-app.MapControllerRoute(
-    name: "default",
-    pattern: "{controller=Auth}/{action=Register}/{id?}");
-
 
 app.Run();

@@ -42,6 +42,7 @@ namespace HabitFlow.BLL.Services
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
                 IsEmailConfirmed = false,
                 EmailConfirmationToken = token,
+                AvatarId = 1,
                 CreatedAt = DateTime.UtcNow,
             };
 
@@ -52,8 +53,7 @@ namespace HabitFlow.BLL.Services
                 dto.Name,
                 confirmationLink + $"?token={token}&email={dto.Email}");
 
-            this.logger.LogInformation("Новий користувач зареєстрований: {Email}", dto.Email);
-
+            this.logger.LogInformation("Новий користувач: {Email}", dto.Email);
             return (true, string.Empty);
         }
 
@@ -97,6 +97,50 @@ namespace HabitFlow.BLL.Services
             await this.userRepository.UpdateAsync(user);
 
             this.logger.LogInformation("Email підтверджено: {Email}", email);
+            return (true, string.Empty);
+        }
+
+        public async Task<(bool Success, string Error)> ForgotPasswordAsync(
+            string email,
+            string resetLink)
+        {
+            var user = await this.userRepository.GetByEmailAsync(email);
+
+            if (user == null || !user.IsEmailConfirmed)
+            {
+                // Не розкриваємо чи існує email
+                return (true, string.Empty);
+            }
+
+            var token = Guid.NewGuid().ToString();
+            user.PasswordResetToken = token;
+            user.PasswordResetTokenExpiry = DateTime.UtcNow.AddHours(1);
+            await this.userRepository.UpdateAsync(user);
+
+            var fullResetLink = resetLink + $"?token={token}&email={email}";
+            await this.emailService.SendPasswordResetEmailAsync(email, user.Name, fullResetLink);
+
+            this.logger.LogInformation("Запит відновлення паролю: {Email}", email);
+            return (true, string.Empty);
+        }
+
+        public async Task<(bool Success, string Error)> ResetPasswordAsync(ResetPasswordDto dto)
+        {
+            var user = await this.userRepository.GetByEmailAsync(dto.Email);
+
+            if (user == null
+                || user.PasswordResetToken != dto.Token
+                || user.PasswordResetTokenExpiry < DateTime.UtcNow)
+            {
+                return (false, "Невірне або застаріле посилання");
+            }
+
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.NewPassword);
+            user.PasswordResetToken = null;
+            user.PasswordResetTokenExpiry = null;
+            await this.userRepository.UpdateAsync(user);
+
+            this.logger.LogInformation("Пароль змінено: {Email}", dto.Email);
             return (true, string.Empty);
         }
     }

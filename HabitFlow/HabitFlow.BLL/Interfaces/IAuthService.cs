@@ -14,5 +14,11 @@ namespace HabitFlow.BLL.Interfaces
         Task<(bool Success, string Error)> ConfirmEmailAsync(
             string email,
             string token);
+
+        Task<(bool Success, string Error)> ForgotPasswordAsync(
+            string email,
+            string resetLink);
+
+        Task<(bool Success, string Error)> ResetPasswordAsync(ResetPasswordDto dto);
     }
 }

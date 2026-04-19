@@ -4,9 +4,11 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] — HabitFlow</title>
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -37,8 +39,6 @@
             border-radius: 8px;
             padding: 8px 18px !important;
             font-weight: 600 !important;
-            font-size: 14px;
-            transition: background 0.2s;
         }
 
             .btn-register:hover {
@@ -51,7 +51,6 @@
             border-radius: 8px;
             padding: 7px 18px !important;
             font-weight: 600 !important;
-            font-size: 14px;
         }
 
         .btn-logout {
@@ -62,36 +61,84 @@
             font-size: 13px;
             font-weight: 500;
         }
+
+        .avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .profile-link {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
     </style>
 </head>
+
 <body>
     <header>
         <nav class="navbar navbar-expand-sm navbar-light">
             <div class="container-fluid">
-                <a class="navbar-brand" asp-controller="Auth" asp-action="Register">HabitFlow</a>
+
+                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
+                    HabitFlow
+                </a>
+
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
+
                 <div class="collapse navbar-collapse" id="navbarNav">
+
                     <ul class="navbar-nav ms-auto align-items-center gap-2">
+
                         @if (Context.Session.GetString("UserId") != null)
                         {
+                            <!-- PROFILE -->
                             <li class="nav-item">
-                                <span class="nav-link">👋 @Context.Session.GetString("UserName")</span>
+                                <a class="nav-link profile-link"
+                                   asp-controller="Profile"
+                                   asp-action="Index">
+
+                                    <img src="/images/default-avatar.png"
+                                         class="avatar" />
+
+                                    <span>@Context.Session.GetString("UserName")</span>
+                                </a>
                             </li>
+
+                            <!-- LOGOUT -->
                             <li class="nav-item">
-                                <a class="nav-link btn-logout" asp-controller="Auth" asp-action="Logout">Вийти</a>
+                                <a class="nav-link btn-logout"
+                                   asp-controller="Auth"
+                                   asp-action="Logout">
+                                    Вийти
+                                </a>
                             </li>
                         }
                         else
                         {
+                            <!-- LOGIN -->
                             <li class="nav-item">
-                                <a class="nav-link btn-login" asp-controller="Auth" asp-action="Login">Увійти</a>
+                                <a class="nav-link btn-login"
+                                   asp-controller="Auth"
+                                   asp-action="Login">
+                                    Увійти
+                                </a>
                             </li>
+
+                            <!-- REGISTER -->
                             <li class="nav-item">
-                                <a class="nav-link btn-register" asp-controller="Auth" asp-action="Register">Зареєструватись</a>
+                                <a class="nav-link btn-register"
+                                   asp-controller="Auth"
+                                   asp-action="Register">
+                                    Зареєструватись
+                                </a>
                             </li>
                         }
+
                     </ul>
                 </div>
             </div>
@@ -105,6 +152,8 @@
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
+
     @await RenderSectionAsync("Scripts", required: false)
+
 </body>
 </html>
