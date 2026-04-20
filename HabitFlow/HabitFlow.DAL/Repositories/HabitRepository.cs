@@ -1,6 +1,6 @@
-﻿using HabitFlow.Domain.Entities;
+﻿using HabitFlow.DAL.Context;
+using HabitFlow.Domain.Entities;
 using HabitFlow.Domain.Interfaces;
-using HabitFlow.DAL.Context;
 using Microsoft.EntityFrameworkCore;
 
 namespace HabitFlow.DAL.Repositories
@@ -15,41 +15,32 @@ namespace HabitFlow.DAL.Repositories
         }
 
         public async Task<Habit?> GetByIdAsync(Guid id)
-        {
-            return await this.context.Habits
-                .Include(h => h.Logs)
-                .Include(h => h.Analytics)
-                .FirstOrDefaultAsync(h => h.Id == id);
-        }
+            => await context.Habits.FindAsync(id);
 
         public async Task<List<Habit>> GetByUserIdAsync(Guid userId)
-        {
-            return await this.context.Habits
-                .Where(h => h.UserId == userId && h.IsActive)
-                .Include(h => h.Analytics)
-                .OrderBy(h => h.CreatedAt)
+            => await context.Habits
+                .Where(h => h.UserId == userId)
                 .ToListAsync();
-        }
 
         public async Task AddAsync(Habit habit)
         {
-            await this.context.Habits.AddAsync(habit);
-            await this.context.SaveChangesAsync();
+            await context.Habits.AddAsync(habit);
+            await context.SaveChangesAsync();
         }
 
         public async Task UpdateAsync(Habit habit)
         {
-            this.context.Habits.Update(habit);
-            await this.context.SaveChangesAsync();
+            context.Habits.Update(habit);
+            await context.SaveChangesAsync();
         }
 
         public async Task DeleteAsync(Guid id)
         {
-            var habit = await this.context.Habits.FindAsync(id);
-            if (habit != null)
+            var entity = await context.Habits.FindAsync(id);
+            if (entity != null)
             {
-                habit.IsActive = false;
-                await this.context.SaveChangesAsync();
+                context.Habits.Remove(entity);
+                await context.SaveChangesAsync();
             }
         }
     }

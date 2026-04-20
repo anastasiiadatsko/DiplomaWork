@@ -8,6 +8,8 @@ namespace HabitFlow.Domain.Interfaces
 
         Task<List<HabitLog>> GetByHabitIdAsync(Guid habitId);
 
+        Task<int> GetCompletedCountByUserIdAsync(Guid userId);
+
         Task AddAsync(HabitLog log);
 
         Task UpdateAsync(HabitLog log);
