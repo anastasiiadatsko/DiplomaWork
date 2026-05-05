@@ -1,73 +1,714 @@
-﻿@{
-    ViewData["Title"] = "Дашборд";
+﻿@using HabitFlow.BLL.DTOs
+@model DashboardViewModel
+@{
+    Layout = null;
+    var today = DateTime.Now;
+    var dayNames = new[] { "Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб" };
+    var monthNames = new[] { "Січ", "Лют", "Бер", "Кві", "Тра", "Чер", "Лип", "Сер", "Вер", "Жов", "Лис", "Гру" };
 }
 <!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HabitFlow — Дашборд</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', sans-serif; background: #f0fdf4; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0fdf4;
+            min-height: 100vh;
+        }
+
         .navbar {
             background: white;
-            padding: 16px 32px;
+            padding: 14px 32px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
-        .logo { font-size: 20px; font-weight: 700; color: #16a34a; }
-        .nav-right { display: flex; align-items: center; gap: 16px; }
-        .user-name { font-size: 14px; color: #374151; font-weight: 500; }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #16a34a;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-link {
+            font-size: 14px;
+            color: #374151;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 7px 14px;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+
+            .nav-link:hover {
+                background: #f3f4f6;
+            }
+
+            .nav-link.active {
+                background: #dcfce7;
+                color: #16a34a;
+            }
+
         .btn-logout {
             padding: 8px 16px;
             background: #f3f4f6;
             color: #374151;
-            border: none;
             border-radius: 8px;
-            font-family: 'Inter', sans-serif;
             font-size: 13px;
             font-weight: 500;
-            cursor: pointer;
             text-decoration: none;
         }
-        .btn-logout:hover { background: #e5e7eb; }
-        .container { max-width: 1100px; margin: 40px auto; padding: 0 24px; }
-        .welcome {
+
+        .container {
+            max-width: 1100px;
+            margin: 32px auto;
+            padding: 0 24px;
+        }
+
+        /* HEADER */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+
+        .page-title {
             font-size: 26px;
             font-weight: 700;
             color: #111827;
-            margin-bottom: 8px;
         }
-        .subtitle { font-size: 15px; color: #6b7280; margin-bottom: 32px; }
-        .coming-soon {
+
+        .page-subtitle {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+        .btn-add {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 11px 22px;
+            background: #16a34a;
+            color: white;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+
+            .btn-add:hover {
+                background: #15803d;
+            }
+
+        /* STATS */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
             background: white;
             border-radius: 16px;
-            padding: 60px;
-            text-align: center;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+            border-top: 3px solid transparent;
         }
-        .coming-soon h2 { font-size: 20px; color: #374151; margin-bottom: 8px; }
-        .coming-soon p { font-size: 14px; color: #9ca3af; }
+
+            .stat-card.green {
+                border-top-color: #16a34a;
+            }
+
+            .stat-card.yellow {
+                border-top-color: #facc15;
+            }
+
+            .stat-card.blue {
+                border-top-color: #60a5fa;
+            }
+
+            .stat-card.purple {
+                border-top-color: #a78bfa;
+            }
+
+        .stat-label {
+            font-size: 12px;
+            color: #9ca3af;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #111827;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+            .stat-value.green {
+                color: #16a34a;
+            }
+
+            .stat-value.yellow {
+                color: #ca8a04;
+            }
+
+            .stat-value.blue {
+                color: #2563eb;
+            }
+
+            .stat-value.purple {
+                color: #7c3aed;
+            }
+
+        .stat-sub {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        /* MAIN GRID */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 20px;
+        }
+
+        /* HABITS */
+        .card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .card-link {
+            font-size: 13px;
+            color: #16a34a;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+            .card-link:hover {
+                text-decoration: underline;
+            }
+
+        .habits-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .habit-item {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            border: 1.5px solid #f3f4f6;
+            background: #fafafa;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+            .habit-item:hover {
+                border-color: #e5e7eb;
+                background: white;
+                transform: translateY(-1px);
+                box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+            }
+
+            .habit-item.completed {
+                opacity: 0.65;
+            }
+
+                .habit-item.completed .habit-name {
+                    text-decoration: line-through;
+                    color: #9ca3af;
+                }
+
+        .habit-color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .habit-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .habit-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .habit-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .habit-streak {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .mini-bar {
+            width: 70px;
+            height: 4px;
+            background: #f3f4f6;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .mini-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.5s ease;
+        }
+
+        .check-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid #e5e7eb;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            font-size: 15px;
+        }
+
+            .check-btn:hover {
+                border-color: #16a34a;
+                background: #f0fdf4;
+            }
+
+            .check-btn.done {
+                background: #16a34a;
+                border-color: #16a34a;
+                color: white;
+            }
+
+        .empty-state {
+            text-align: center;
+            padding: 48px 24px;
+        }
+
+            .empty-state .empty-icon {
+                font-size: 48px;
+                margin-bottom: 12px;
+            }
+
+            .empty-state p {
+                font-size: 15px;
+                color: #6b7280;
+                margin-bottom: 16px;
+            }
+
+            .empty-state a {
+                display: inline-block;
+                background: #16a34a;
+                color: white;
+                padding: 11px 24px;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: 600;
+                text-decoration: none;
+            }
+
+        /* SIDEBAR */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        /* HEATMAP */
+        .heatmap-grid {
+            display: grid;
+            grid-template-columns: repeat(13, 1fr);
+            gap: 3px;
+            margin-top: 12px;
+        }
+
+        .hm-cell {
+            aspect-ratio: 1;
+            border-radius: 3px;
+            background: #f3f4f6;
+            cursor: default;
+            transition: transform 0.1s;
+        }
+
+            .hm-cell:hover {
+                transform: scale(1.3);
+            }
+
+            .hm-cell.l1 {
+                background: #bbf7d0;
+            }
+
+            .hm-cell.l2 {
+                background: #4ade80;
+            }
+
+            .hm-cell.l3 {
+                background: #16a34a;
+            }
+
+            .hm-cell.l4 {
+                background: #14532d;
+            }
+
+        .hm-legend {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            margin-top: 8px;
+            font-size: 11px;
+            color: #9ca3af;
+        }
+
+        .hm-legend-cell {
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+        }
+
+        /* INSIGHTS */
+        .insight-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px;
+            background: #f9fafb;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            align-items: flex-start;
+        }
+
+            .insight-item:last-child {
+                margin-bottom: 0;
+            }
+
+        .insight-icon {
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .insight-text {
+            font-size: 13px;
+            color: #374151;
+            line-height: 1.5;
+        }
+
+            .insight-text strong {
+                color: #111827;
+            }
+
+        /* TOAST */
+        .toast {
+            padding: 12px 16px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .toast-success {
+            background: #dcfce7;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
     </style>
 </head>
 <body>
+
     <nav class="navbar">
-        <div class="logo">HabitFlow</div>
-        <div class="nav-right">
-            <span class="user-name">👋 @ViewBag.UserName</span>
-            <a href="/Auth/Logout" class="btn-logout">Вийти</a>
+        <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
+        <div class="nav-links">
+            <a asp-controller="Dashboard" asp-action="Index" class="nav-link active">🏠 Дашборд</a>
+            <a asp-controller="Habit" asp-action="Index" class="nav-link">📋 Мої звички</a>
+            <a asp-controller="Profile" asp-action="Index" class="nav-link">👤 @Model.UserName</a>
+            <a asp-controller="Auth" asp-action="Logout" class="btn-logout">Вийти</a>
         </div>
     </nav>
+
     <div class="container">
-        <div class="welcome">Добрий день, @ViewBag.UserName! 👋</div>
-        <div class="subtitle">Готовий будувати нові звички?</div>
-        <div class="coming-soon">
-            <h2>🚀 Дашборд в розробці</h2>
-            <p>Скоро тут буде твоя аналітика та звички</p>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="toast toast-success">✓ @TempData["Success"]</div>
+        }
+
+        <!-- HEADER -->
+        <div class="page-header">
+            <div>
+                <div class="page-title">
+                    @{
+                        var hour = DateTime.Now.Hour;
+                        var greeting = hour < 12 ? "Доброго ранку" : hour < 17 ? "Доброго дня" : "Доброго вечора";
+                    }
+                    @greeting, @Model.UserName! 👋
+                </div>
+                <div class="page-subtitle">
+                    @today.ToString("dddd, dd MMMM yyyy", new System.Globalization.CultureInfo("uk-UA"))
+                    · Виконано @Model.CompletedToday з @Model.TodayHabits.Count звичок
+                </div>
+            </div>
+            <a asp-controller="Habit" asp-action="Create" class="btn-add">
+                + Нова звичка
+            </a>
+        </div>
+
+        <!-- STATS -->
+        <div class="stats-grid">
+            <div class="stat-card green">
+                <div class="stat-label">Виконано сьогодні</div>
+                <div class="stat-value green">@Model.CompletedToday/@Model.TodayHabits.Count</div>
+                <div class="stat-sub">звичок на сьогодні</div>
+            </div>
+            <div class="stat-card yellow">
+                <div class="stat-label">Найдовша серія</div>
+                <div class="stat-value yellow">@Model.LongestStreak</div>
+                <div class="stat-sub">🔥 днів підряд</div>
+            </div>
+            <div class="stat-card blue">
+                <div class="stat-label">Всього виконань</div>
+                <div class="stat-value blue">@Model.TotalCompleted</div>
+                <div class="stat-sub">за весь час</div>
+            </div>
+            <div class="stat-card purple">
+                <div class="stat-label">Consistency Rate</div>
+                <div class="stat-value purple">@Model.OverallConsistencyRate%</div>
+                <div class="stat-sub">середнє виконання</div>
+            </div>
+        </div>
+
+        <!-- MAIN GRID -->
+        <div class="main-grid">
+
+            <!-- HABITS LIST -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">📅 Звички на сьогодні</div>
+                    <a asp-controller="Habit" asp-action="Index" class="card-link">Всі звички →</a>
+                </div>
+
+                @if (!Model.TodayHabits.Any())
+                {
+                    <div class="empty-state">
+                        <div class="empty-icon">🌱</div>
+                        <p>У тебе ще немає звичок на сьогодні</p>
+                        <a asp-controller="Habit" asp-action="Create">+ Додати першу звичку</a>
+                    </div>
+                }
+                else
+                {
+                    <div class="habits-list">
+                        @foreach (var habit in Model.TodayHabits)
+                        {
+                            <div class="habit-item @(habit.IsCompletedToday ? "completed" : "")"
+                                 id="habit-@habit.Id">
+                                <div class="habit-color-dot" style="background:@habit.Color"></div>
+                                <div class="habit-info">
+                                    <div class="habit-name">@habit.Name</div>
+                                    <div class="habit-meta">
+                                        <span class="habit-streak">
+                                            @(habit.CurrentStreak > 0 ? $"🔥 {habit.CurrentStreak} дн." : "⚡ Починай!")
+                                        </span>
+                                        <span>·</span>
+                                        <div class="mini-bar">
+                                            <div class="mini-bar-fill"
+                                                 style="width:@habit.ConsistencyRate%;background:@habit.Color">
+                                            </div>
+                                        </div>
+                                        <span>@habit.ConsistencyRate%</span>
+                                    </div>
+                                </div>
+                                <button class="check-btn @(habit.IsCompletedToday ? "done" : "")"
+                                        onclick="toggleHabit('@habit.Id', this)"
+                                        title="@(habit.IsCompletedToday ? "Скасувати" : "Відмітити як виконане")">
+                                    @(habit.IsCompletedToday ? "✓" : "")
+                                </button>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+
+            <!-- SIDEBAR -->
+            <div class="sidebar">
+
+                <!-- HEATMAP -->
+                <div class="card">
+                    <div class="card-title" style="margin-bottom:4px">🗓 Активність за рік</div>
+                    <div class="heatmap-grid">
+                        @foreach (var day in Model.HeatmapData)
+                        {
+                            <div class="hm-cell @(day.Level > 0 ? $"l{day.Level}" : "")"
+                                 title="@day.Date.ToString("dd.MM.yyyy"): @day.CompletedCount виконань">
+                            </div>
+                        }
+                    </div>
+                    <div class="hm-legend">
+                        <span>Менше</span>
+                        <div class="hm-legend-cell" style="background:#f3f4f6"></div>
+                        <div class="hm-legend-cell" style="background:#bbf7d0"></div>
+                        <div class="hm-legend-cell" style="background:#4ade80"></div>
+                        <div class="hm-legend-cell" style="background:#16a34a"></div>
+                        <div class="hm-legend-cell" style="background:#14532d"></div>
+                        <span>Більше</span>
+                    </div>
+                </div>
+
+                <!-- INSIGHTS -->
+                <div class="card">
+                    <div class="card-title" style="margin-bottom:14px">💡 Інсайти</div>
+
+                    @if (!Model.TodayHabits.Any())
+                    {
+                        <div class="insight-item">
+                            <div class="insight-icon">🌱</div>
+                            <div class="insight-text">Додай свою першу звичку і почни відстеження прогресу!</div>
+                        </div>
+                    }
+                    else
+                    {
+                        @if (Model.CompletedToday == Model.TodayHabits.Count && Model.TodayHabits.Any())
+                        {
+                            <div class="insight-item">
+                                <div class="insight-icon">🎉</div>
+                                <div class="insight-text"><strong>Всі звички виконані!</strong> Чудовий день, так тримати!</div>
+                            </div>
+                        }
+                        else if (Model.CompletedToday == 0)
+                        {
+                            <div class="insight-item">
+                                <div class="insight-icon">⚡</div>
+                                <div class="insight-text">Сьогодні ще нічого не виконано. Починай прямо зараз!</div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="insight-item">
+                                <div class="insight-icon">🔥</div>
+                                <div class="insight-text">
+                                    Виконано <strong>@Model.CompletedToday з @Model.TodayHabits.Count</strong>.
+                                    Залишилось ще @(Model.TodayHabits.Count - Model.CompletedToday)!
+                                </div>
+                            </div>
+                        }
+
+                        @if (Model.LongestStreak >= 7)
+                        {
+                            <div class="insight-item">
+                                <div class="insight-icon">🏆</div>
+                                <div class="insight-text">Серія <strong>@Model.LongestStreak днів</strong> — ти на правильному шляху!</div>
+                            </div>
+                        }
+
+                        @if (Model.TotalCompleted >= 1)
+                        {
+                            <div class="insight-item">
+                                <div class="insight-icon">📊</div>
+                                <div class="insight-text">
+                                    Загальний Consistency Rate: <strong>@Model.OverallConsistencyRate%</strong>
+                                </div>
+                            </div>
+                        }
+                    }
+                </div>
+
+            </div>
         </div>
     </div>
+
+    <script>
+        async function toggleHabit(habitId, btn) {
+            try {
+                const response = await fetch('/Habit/Toggle/' + habitId, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector(
+                            'input[name="__RequestVerificationToken"]')?.value || ''
+                    }
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const item = document.getElementById('habit-' + habitId);
+                    const nameEl = item.querySelector('.habit-name');
+
+                    if (data.completed) {
+                        item.classList.add('completed');
+                        btn.classList.add('done');
+                        btn.textContent = '✓';
+                    } else {
+                        item.classList.remove('completed');
+                        btn.classList.remove('done');
+                        btn.textContent = '';
+                    }
+                }
+            } catch (e) {
+                console.error('Error:', e);
+            }
+        }
+    </script>
+
 </body>
 </html>

@@ -1,18 +1,30 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using HabitFlow.BLL.Interfaces;
+using Microsoft.AspNetCore.Mvc;
 
 namespace HabitFlow.Web.Controllers
 {
     public class DashboardController : Controller
     {
-        public IActionResult Index()
+        private readonly IHabitService habitService;
+
+        public DashboardController(IHabitService habitService)
         {
-            if (this.HttpContext.Session.GetString("UserId") == null)
+            this.habitService = habitService;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            var userId = this.HttpContext.Session.GetString("UserId");
+            if (userId == null)
             {
                 return this.RedirectToAction("Login", "Auth");
             }
 
-            this.ViewBag.UserName = this.HttpContext.Session.GetString("UserName");
-            return this.View();
+            var userName = this.HttpContext.Session.GetString("UserName") ?? "Користувач";
+            var model = await this.habitService.GetDashboardAsync(
+                Guid.Parse(userId), userName);
+
+            return this.View(model);
         }
     }
 }

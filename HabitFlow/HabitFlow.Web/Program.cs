@@ -25,6 +25,8 @@ builder.Services.AddScoped<IHabitLogRepository, HabitLogRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddScoped<IHabitService, HabitService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 
 builder.Services.AddSession(options =>
 {
