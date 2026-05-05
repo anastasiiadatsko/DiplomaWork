@@ -1,0 +1,189 @@
+﻿@{
+    Layout = null;
+    var habitId = ViewBag.HabitId;
+    var habitName = ViewBag.HabitName as string;
+    var habitColor = ViewBag.HabitColor as string;
+    var today = DateTime.Today.ToString("yyyy-MM-dd");
+    var monthAgo = DateTime.Today.AddDays(-30).ToString("yyyy-MM-dd");
+}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <title>HabitFlow — Ручне введення</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:#f0fdf4; min-height:100vh; }
+        .navbar { background:white; padding:14px 32px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 1px 8px rgba(0,0,0,0.06); }
+        .logo { font-size:20px; font-weight:700; color:#16a34a; text-decoration:none; }
+        .back { font-size:14px; color:#6b7280; text-decoration:none; }
+        .container { max-width:640px; margin:32px auto; padding:0 24px 48px; }
+        .page-title { font-size:22px; font-weight:700; color:#111827; margin-bottom:6px; display:flex; align-items:center; gap:10px; }
+        .color-dot { width:12px; height:12px; border-radius:50%; }
+        .subtitle { font-size:14px; color:#6b7280; margin-bottom:24px; }
+
+        .toast { padding:12px 16px; border-radius:10px; margin-bottom:16px; font-size:14px; font-weight:500; background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+
+        .card { background:white; border-radius:20px; padding:28px; box-shadow:0 2px 16px rgba(0,0,0,0.06); margin-bottom:16px; }
+        .card-title { font-size:15px; font-weight:700; color:#111827; margin-bottom:6px; }
+        .card-desc { font-size:13px; color:#9ca3af; margin-bottom:20px; line-height:1.5; }
+
+        .form-label { display:block; font-size:12px; font-weight:600; color:#374151; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:6px; }
+        .form-input { width:100%; padding:11px 14px; border:1.5px solid #e5e7eb; border-radius:10px; font-family:'Inter',sans-serif; font-size:15px; color:#111827; background:#f9fafb; outline:none; transition:border-color 0.2s; }
+        .form-input:focus { border-color:#16a34a; background:white; }
+        .form-group { margin-bottom:16px; }
+
+        .date-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+        .btn { padding:12px 24px; border:none; border-radius:10px; font-family:'Inter',sans-serif; font-size:14px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+        .btn-primary { background:#16a34a; color:white; width:100%; }
+        .btn-primary:hover { background:#15803d; }
+        .btn-secondary { background:#f3f4f6; color:#374151; }
+
+        /* CALENDAR */
+        .calendar-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; margin-top:8px; }
+        .cal-header { text-align:center; font-size:11px; font-weight:700; color:#9ca3af; padding:4px 0; }
+        .cal-day { aspect-ratio:1; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:500; cursor:pointer; border:1.5px solid transparent; transition:all 0.15s; color:#374151; background:#f9fafb; }
+        .cal-day:hover { border-color:#16a34a; background:#f0fdf4; }
+        .cal-day.selected { background:#16a34a; color:white; border-color:#16a34a; }
+        .cal-day.today { border-color:#86efac; font-weight:700; }
+        .cal-day.empty { background:transparent; cursor:default; }
+
+        .quick-btns { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+        .quick-btn { padding:7px 14px; border-radius:100px; font-size:12px; font-weight:600; cursor:pointer; border:1.5px solid #e5e7eb; background:white; color:#374151; font-family:'Inter',sans-serif; transition:all 0.15s; }
+        .quick-btn:hover { border-color:#16a34a; color:#16a34a; background:#f0fdf4; }
+
+        .info-box { background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:14px 16px; font-size:13px; color:#15803d; line-height:1.5; margin-bottom:16px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
+        <a asp-controller="Habit" asp-action="Index" class="back">← Назад до звичок</a>
+    </nav>
+
+    <div class="container">
+
+        <div class="page-title">
+            <span class="color-dot" style="background:@habitColor"></span>
+            📅 Введення виконань
+        </div>
+        <div class="subtitle">@habitName · Додай минулі виконання для точного аналізу</div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="toast">✓ @TempData["Success"]</div>
+        }
+
+        <div class="info-box">
+            💡 <strong>Для тестування:</strong> використовуй "Швидке заповнення" щоб додати одразу
+            кілька тижнів виконань і побачити як працює математична аналітика.
+        </div>
+
+        <!-- SINGLE DATE -->
+        <div class="card">
+            <div class="card-title">📍 Одна дата</div>
+            <div class="card-desc">Відміть виконання за конкретний день</div>
+
+            <div class="quick-btns">
+                <button class="quick-btn" onclick="setDate(0)">Сьогодні</button>
+                <button class="quick-btn" onclick="setDate(-1)">Вчора</button>
+                <button class="quick-btn" onclick="setDate(-2)">2 дні тому</button>
+                <button class="quick-btn" onclick="setDate(-7)">Тиждень тому</button>
+            </div>
+
+            <form asp-controller="Habit" asp-action="ManualLog" method="post">
+                <input type="hidden" name="HabitId" value="@habitId" />
+                <div class="form-group">
+                    <label class="form-label">Дата виконання</label>
+                    <input class="form-input" type="date" name="Date"
+                           id="singleDate" value="@today" max="@today" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Нотатка (необов'язково)</label>
+                    <input class="form-input" type="text" name="Note"
+                           placeholder="Коментар до виконання..." />
+                </div>
+                <button type="submit" class="btn btn-primary">✓ Додати виконання</button>
+            </form>
+        </div>
+
+        <!-- DATE RANGE -->
+        <div class="card">
+            <div class="card-title">📆 Діапазон дат</div>
+            <div class="card-desc">
+                Додай виконання за кілька днів одразу — ідеально для тестування аналітики
+            </div>
+
+            <div class="quick-btns">
+                <button class="quick-btn" onclick="setRange(7)">Останній тиждень</button>
+                <button class="quick-btn" onclick="setRange(14)">2 тижні</button>
+                <button class="quick-btn" onclick="setRange(30)">Місяць</button>
+                <button class="quick-btn" onclick="setRange(66)">66 днів (норма)</button>
+            </div>
+
+            <form asp-controller="Habit" asp-action="ManualLogRange" method="post">
+                <input type="hidden" name="habitId" value="@habitId" />
+                <div class="date-grid">
+                    <div class="form-group">
+                        <label class="form-label">Від</label>
+                        <input class="form-input" type="date" name="fromDate"
+                               id="fromDate" value="@monthAgo" max="@today" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">До</label>
+                        <input class="form-input" type="date" name="toDate"
+                               id="toDate" value="@today" max="@today" />
+                    </div>
+                </div>
+                <div id="rangePreview" style="font-size:13px;color:#6b7280;margin-bottom:16px"></div>
+                <button type="submit" class="btn btn-primary">
+                    ✓ Додати всі дні діапазону
+                </button>
+            </form>
+        </div>
+
+        <!-- LINK TO ANALYTICS -->
+        <div style="text-align:center;margin-top:8px">
+            <a asp-controller="Analytics" asp-action="Index"
+               asp-route-habitId="@habitId"
+               style="display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:#8b5cf6;color:white;border-radius:12px;font-size:14px;font-weight:600;text-decoration:none">
+                📊 Переглянути аналітику →
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const today = new Date();
+
+        function setDate(daysOffset) {
+            const d = new Date(today);
+            d.setDate(d.getDate() + daysOffset);
+            document.getElementById('singleDate').value = d.toISOString().split('T')[0];
+        }
+
+        function setRange(days) {
+            const from = new Date(today);
+            from.setDate(from.getDate() - days + 1);
+            document.getElementById('fromDate').value = from.toISOString().split('T')[0];
+            document.getElementById('toDate').value = today.toISOString().split('T')[0];
+            updateRangePreview();
+        }
+
+        function updateRangePreview() {
+            const from = new Date(document.getElementById('fromDate').value);
+            const to = new Date(document.getElementById('toDate').value);
+            const days = Math.round((to - from) / (1000 * 60 * 60 * 24)) + 1;
+            if (days > 0) {
+                document.getElementById('rangePreview').textContent =
+                    `📌 Буде додано ${days} днів виконань`;
+            }
+        }
+
+        document.getElementById('fromDate').addEventListener('change', updateRangePreview);
+        document.getElementById('toDate').addEventListener('change', updateRangePreview);
+        updateRangePreview();
+    </script>
+</body>
+</html>

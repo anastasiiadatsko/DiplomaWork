@@ -1,0 +1,867 @@
+﻿@using HabitFlow.BLL.DTOs
+@using System.Text.Json
+@model AnalyticsViewModel
+
+@{
+    Layout = null;
+
+    var habitId = ViewBag.HabitId;
+
+    var next7Json = JsonSerializer.Serialize(Model.Next7DaysProbabilities);
+    var weekdayJson = JsonSerializer.Serialize(Model.WeekdayStats);
+    var mnkPointsJson = JsonSerializer.Serialize(Model.MnkPoints);
+    var trendJson = JsonSerializer.Serialize(Model.MnkTrendLine);
+
+    string hssColor;
+    string hssEmoji;
+    string hssText;
+
+    if (Model.HabitStrengthScore < 30)
+    {
+        hssColor = "#ef4444";
+        hssEmoji = "🌱";
+        hssText = "Тільки починаєш. Головне — не здаватись!";
+    }
+    else if (Model.HabitStrengthScore < 60)
+    {
+        hssColor = "#f59e0b";
+        hssEmoji = "🌿";
+        hssText = "Є прогрес! Звичка починає закріплюватись.";
+    }
+    else if (Model.HabitStrengthScore < 80)
+    {
+        hssColor = "#3b82f6";
+        hssEmoji = "🌳";
+        hssText = "Сильна звичка. Ще трохи — і стане автоматичною.";
+    }
+    else
+    {
+        hssColor = "#16a34a";
+        hssEmoji = "🏆";
+        hssText = "Звичка повністю сформована. Ти молодець!";
+    }
+
+    string riskColor;
+    string riskText;
+
+    if (Model.BreakRisk < 25)
+    {
+        riskColor = "#16a34a";
+        riskText = "Низький — ти стабільний 💪";
+    }
+    else if (Model.BreakRisk < 50)
+    {
+        riskColor = "#f59e0b";
+        riskText = "Помірний — будь уважний ⚡";
+    }
+    else
+    {
+        riskColor = "#ef4444";
+        riskText = "Високий — постав нагадування ⚠️";
+    }
+
+    var p00Class = "cell-yellow";
+    var p01Class = "cell-red";
+    var p10Class = "cell-yellow";
+    var p11Class = "cell-red";
+
+    if (Model.TransitionMatrix.Length > 0)
+    {
+        p00Class = Model.TransitionMatrix[0][0] > 0.5 ? "cell-green" : "cell-yellow";
+        p01Class = Model.TransitionMatrix[0][1] < 0.3 ? "cell-green" : "cell-red";
+    }
+
+    if (Model.TransitionMatrix.Length > 1)
+    {
+        p10Class = Model.TransitionMatrix[1][0] > 0.5 ? "cell-green" : "cell-yellow";
+        p11Class = Model.TransitionMatrix[1][1] < 0.3 ? "cell-green" : "cell-red";
+    }
+}
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>HabitFlow Analytics</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Inter,sans-serif;
+            background: #f0fdf4;
+        }
+
+        .navbar {
+            background: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 700;
+            color: #16a34a;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-link, .btn-logout {
+            text-decoration: none;
+            padding: 9px 14px;
+            border-radius: 10px;
+            color: #374151;
+            background: #f9fafb;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1050px;
+            margin: 30px auto;
+            padding: 0 20px 50px;
+        }
+
+        .page-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .habit-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .habit-dot {
+            width: 15px;
+            height: 15px;
+            border-radius: 50%;
+        }
+
+        .page-subtitle {
+            margin-top: 6px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .btn-manual {
+            background: #dbeafe;
+            color: #2563eb;
+            padding: 11px 18px;
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .hss-card {
+            background: white;
+            padding: 30px;
+            border-radius: 24px;
+            display: flex;
+            gap: 30px;
+            box-shadow: 0 3px 20px rgba(0,0,0,.05);
+            margin-bottom: 22px;
+        }
+
+        .hss-circle {
+            width: 150px;
+            height: 150px;
+            position: relative;
+        }
+
+        .hss-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%,-50%);
+            text-align: center;
+        }
+
+        .hss-value {
+            font-size: 38px;
+            font-weight: 700;
+        }
+
+        .hss-max {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .hss-info h2 {
+            font-size: 22px;
+            margin-bottom: 10px;
+        }
+
+        .hss-info p {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .hss-progress-track {
+            height: 10px;
+            background: #f3f4f6;
+            border-radius: 7px;
+            overflow: hidden;
+        }
+
+        .hss-progress-fill {
+            height: 100%;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4,1fr);
+            gap: 14px;
+            margin: 20px 0;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 22px;
+            border-radius: 18px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,.04);
+        }
+
+        .stat-emoji {
+            font-size: 30px;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 34px;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .insights-row {
+            display: grid;
+            grid-template-columns: repeat(3,1fr);
+            gap: 15px;
+            margin-bottom: 22px;
+        }
+
+        .insight-card {
+            background: white;
+            padding: 22px;
+            border-radius: 18px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.04);
+        }
+
+        .insight-header {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .insight-title {
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .insight-value {
+            font-size: 25px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .insight-desc {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+
+        .insight-tip {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 24px;
+            border-radius: 22px;
+            box-shadow: 0 2px 15px rgba(0,0,0,.05);
+        }
+
+        .chart-title {
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .chart-subtitle {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-bottom: 15px;
+        }
+
+        .chart-wrap {
+            height: 230px;
+            position: relative;
+        }
+
+        .weekday-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .weekday-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .weekday-name {
+            width: 30px;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .weekday-track {
+            flex: 1;
+            height: 10px;
+            background: #f3f4f6;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .weekday-fill {
+            height: 100%;
+        }
+
+        .weekday-pct {
+            width: 42px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .matrix-wrap {
+            display: grid;
+            grid-template-columns: auto 1fr 1fr;
+            gap: 8px;
+        }
+
+        .matrix-header {
+            font-size: 11px;
+            text-align: center;
+            color: #9ca3af;
+        }
+
+        .matrix-row-label {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        .matrix-cell {
+            padding: 10px;
+            text-align: center;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        .cell-green {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .cell-red {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .cell-yellow {
+            background: #fef9c3;
+            color: #ca8a04;
+        }
+
+        .math-section {
+            background: white;
+            padding: 25px;
+            border-radius: 20px;
+            box-shadow: 0 2px 15px rgba(0,0,0,.05);
+        }
+
+        .toggle-math {
+            background: none;
+            border: none;
+            font-size: 15px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .math-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin-top: 20px;
+        }
+
+        .math-item {
+            background: #f9fafb;
+            padding: 15px;
+            border-radius: 14px;
+        }
+
+        .math-item-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .math-formula {
+            margin-top: 8px;
+            background: #f3f4f6;
+            padding: 8px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <a asp-controller="Dashboard" asp-action="Index" class="logo">
+            HabitFlow
+        </a>
+
+        <div class="nav-links">
+            <a asp-controller="Dashboard" asp-action="Index" class="nav-link">🏠</a>
+            <a asp-controller="Habit" asp-action="Index" class="nav-link">📋</a>
+            <a asp-controller="Profile" asp-action="Index" class="nav-link">👤</a>
+            <a asp-controller="Auth" asp-action="Logout" class="btn-logout">Вийти</a>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <div class="page-header">
+            <div>
+                <div class="habit-title">
+                    <span class="habit-dot" style="background:@Model.HabitColor"></span>
+                    @Model.HabitName
+                </div>
+
+                <div class="page-subtitle">
+                    @Model.DaysSinceStart днів відстеження
+                </div>
+            </div>
+
+            <a asp-controller="Habit"
+               asp-action="ManualLog"
+               asp-route-id="@habitId"
+               class="btn-manual">
+                📅 Додати виконання
+            </a>
+        </div>
+
+
+        <div class="hss-card">
+
+            <div class="hss-circle">
+                <canvas id="hssGauge"></canvas>
+
+                <div class="hss-center">
+                    <div class="hss-value" style="color:@hssColor">
+                        @Model.HabitStrengthScore.ToString("F0")
+                    </div>
+                    <div class="hss-max">/100</div>
+                </div>
+            </div>
+
+            <div class="hss-info" style="flex:1">
+                <h2>@hssEmoji Міцність звички</h2>
+                <p>@hssText</p>
+
+                <div class="hss-progress-track">
+                    <div class="hss-progress-fill"
+                         style="width:@Model.HabitStrengthScore%;background:@hssColor">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="stats-row">
+
+            <div class="stat-card">
+                <span class="stat-emoji">🔥</span>
+                <span class="stat-value">@Model.CurrentStreak</span>
+                <span class="stat-label">Серія</span>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-emoji">🏆</span>
+                <span class="stat-value">@Model.MaxStreak</span>
+                <span class="stat-label">Макс серія</span>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-emoji">📊</span>
+                <span class="stat-value">@Model.ConsistencyRate%</span>
+                <span class="stat-label">Consistency</span>
+            </div>
+
+            <div class="stat-card">
+                <span class="stat-emoji">✅</span>
+                <span class="stat-value">@Model.TotalCompleted</span>
+                <span class="stat-label">Виконань</span>
+            </div>
+
+        </div>
+
+
+
+        <div class="insights-row">
+
+            <div class="insight-card">
+                <div class="insight-header">
+                    <div>🎯</div>
+                    <div class="insight-title">Прогноз</div>
+                </div>
+
+                @if (Model.PredictedDaysToForm == 0)
+                {
+                    <div class="insight-value" style="color:#16a34a">Сформована</div>
+                }
+                else
+                {
+                    <div class="insight-value" style="color:#16a34a">
+                        ~@Model.PredictedDaysToForm днів
+                    </div>
+                }
+
+                <div class="insight-desc">
+                    Метод МНК прогнозує дату:
+                    <strong>@Model.PredictedFormationDate.ToString("dd.MM.yyyy")</strong>
+                </div>
+            </div>
+
+
+            <div class="insight-card">
+                <div class="insight-header">
+                    <div>⚡</div>
+                    <div class="insight-title">Ризик зламу</div>
+                </div>
+
+                <div class="insight-value" style="color:@riskColor">
+                    @Model.BreakRisk%
+                </div>
+
+                <div class="insight-desc">
+                    @riskText
+                </div>
+
+            </div>
+
+
+            <div class="insight-card">
+                <div class="insight-header">
+                    <div>🎮</div>
+                    <div class="insight-title">Кращий день</div>
+                </div>
+
+                <div class="insight-value" style="color:#8b5cf6">
+                    @Model.OptimalDayToAct
+                </div>
+
+                <div class="insight-desc">
+                    Уникай:
+                    <strong style="color:#ef4444">
+                        @Model.MostRiskyDay
+                    </strong>
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="charts-row">
+
+            <div class="chart-card">
+                <div class="chart-title">📈 Прогрес</div>
+                <div class="chart-wrap">
+                    <canvas id="mnkChart"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">🔮 7 днів прогноз</div>
+                <div class="chart-wrap">
+                    <canvas id="forecastChart"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+
+        <div class="charts-row">
+
+            <div class="chart-card">
+                <div class="chart-title">📅 По днях</div>
+
+                <div class="weekday-list">
+
+                    @foreach (var stat in Model.WeekdayStats)
+                    {
+                        var color = stat.Rate >= 70 ? "#16a34a"
+                        : stat.Rate >= 40 ? "#f59e0b"
+                        : "#ef4444";
+
+                        <div class="weekday-row">
+                            <span class="weekday-name">@stat.Day</span>
+
+                            <div class="weekday-track">
+                                <div class="weekday-fill"
+                                     style="width:@stat.Rate%;background:@color">
+                                </div>
+                            </div>
+
+                            <span class="weekday-pct"
+                                  style="color:@color">
+                                @stat.Rate%
+                            </span>
+
+                        </div>
+                    }
+
+                </div>
+            </div>
+
+
+            <div class="chart-card">
+
+                <div class="chart-title">
+                    🔗 Марков
+                </div>
+
+                <div class="matrix-wrap">
+
+                    <div></div>
+                    <div class="matrix-header">Виконаєш</div>
+                    <div class="matrix-header">Пропустиш</div>
+
+                    <div class="matrix-row-label">Після виконання</div>
+
+                    <div class="matrix-cell @p00Class">
+                        @((Model.TransitionMatrix.Length > 0) ?
+                            (Model.TransitionMatrix[0][0] * 100).ToString("F0") + "%" : "—")
+                    </div>
+
+                    <div class="matrix-cell @p01Class">
+                        @((Model.TransitionMatrix.Length > 0) ?
+                            (Model.TransitionMatrix[0][1] * 100).ToString("F0") + "%" : "—")
+                    </div>
+
+
+                    <div class="matrix-row-label">Після пропуску</div>
+
+                    <div class="matrix-cell @p10Class">
+                        @((Model.TransitionMatrix.Length > 1) ?
+                            (Model.TransitionMatrix[1][0] * 100).ToString("F0") + "%" : "—")
+                    </div>
+
+                    <div class="matrix-cell @p11Class">
+                        @((Model.TransitionMatrix.Length > 1) ?
+                            (Model.TransitionMatrix[1][1] * 100).ToString("F0") + "%" : "—")
+                    </div>
+
+                </div>
+
+                <br />
+
+                <div>
+                    Стаціонарна ймовірність виконання:
+                    <strong style="color:#16a34a">
+                        @($"{Model.MarkovProbCompleted}%")
+                    </strong>
+                </div>
+
+            </div>
+
+        </div>
+
+
+
+        <div class="math-section">
+
+            <button class="toggle-math" onclick="toggleMath()">
+                <span id="toggleArrow">▶</span>
+                Детальна математика
+            </button>
+
+            <div id="mathDetails" style="display:none">
+
+                <div class="math-grid">
+
+                    <div class="math-item">
+                        <div class="math-item-title">МНК</div>
+                        a₀=@Model.MnkA0.ToString("F3") <br />
+                        a₁=@Model.MnkA1.ToString("F3") <br />
+                        a₂=@Model.MnkA2.ToString("F5")
+                        <div class="math-formula">
+                            y=a₀+a₁t+a₂t²
+                        </div>
+                    </div>
+
+                    <div class="math-item">
+                        <div class="math-item-title">Gradient</div>
+                        α=@Model.AlphaWeight.ToString("F2")
+                        β=@Model.BetaWeight.ToString("F2")
+                        γ=@Model.GammaWeight.ToString("F2")
+
+                        <div class="math-formula">
+                            L=(HSS-target)^2
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <script>
+
+        const next7 = @Html.Raw(next7Json);
+        const trendLine = @Html.Raw(trendJson);
+        const mnkPoints = @Html.Raw(mnkPointsJson);
+
+        const lastX =
+            trendLine.length > 0
+                ? trendLine[trendLine.length - 1].day
+                : 90;
+
+        new Chart(
+            document.getElementById('hssGauge'),
+            {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [@Model.HabitStrengthScore, 100 - @Model.HabitStrengthScore],
+                        backgroundColor: ['@hssColor', '#eee'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    circumference: 270,
+                    rotation: -135,
+                    cutout: '75%',
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+        new Chart(
+            document.getElementById('mnkChart'),
+            {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            data: mnkPoints.map(x => ({ x: x.day, y: x.value })),
+                            borderColor: '@Model.HabitColor',
+                            fill: false
+                        },
+                        {
+                            data: trendLine.map(x => ({ x: x.day, y: x.value })),
+                            borderColor: '#f59e0b',
+                            borderDash: [5, 5]
+                        },
+                        {
+                            data: [
+                                { x: 0, y: 66 },
+                                { x: lastX, y: 66 }
+                            ],
+                            borderColor: '#86efac',
+                            borderDash: [3, 3]
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+        new Chart(
+            document.getElementById('forecastChart'),
+            {
+                type: 'bar',
+                data: {
+                    labels: ['1', '2', '3', '4', '5', '6', '7'],
+                    datasets: [{
+                        data: next7,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false
+                }
+            });
+
+        function toggleMath() {
+            const block = document.getElementById('mathDetails');
+            const arrow = document.getElementById('toggleArrow');
+
+            if (block.style.display === "none") {
+                block.style.display = "block";
+                arrow.textContent = "▼";
+            }
+            else {
+                block.style.display = "none";
+                arrow.textContent = "▶";
+            }
+        }
+
+    </script>
+
+</body>
+</html>
