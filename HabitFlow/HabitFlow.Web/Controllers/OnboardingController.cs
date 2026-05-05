@@ -42,6 +42,37 @@ namespace HabitFlow.Web.Controllers
             }
 
             await this.userService.SaveOnboardingAsync(this.CurrentUserId.Value, dto);
+            return this.RedirectToAction("BalanceWheel");
+        }
+
+        [HttpGet]
+        public IActionResult BalanceWheel()
+        {
+            var userId = HttpContext.Session.GetString("UserId");
+            if (userId == null)
+            {
+                return this.RedirectToAction("Login", "Account");
+            }
+
+            return this.View();
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> BalanceWheel(BalanceWheelDto dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return this.View(dto);
+            }
+
+            var userId = HttpContext.Session.GetString("UserId");
+            if (userId == null)
+            {
+                return this.RedirectToAction("Login", "Account");
+            }
+
+            await this.userService.SaveBalanceWheelAsync(Guid.Parse(userId), dto);
+
             return this.RedirectToAction("Index", "Dashboard");
         }
     }
