@@ -1,6 +1,10 @@
 ﻿@using HabitFlow.BLL.DTOs
 @model DashboardViewModel
 @{
+    ViewData["Title"] = "Дашборд";
+    var recommendations = ViewBag.Recommendations as List<RecommendationViewModel>;
+}
+@{
     Layout = null;
     var today = DateTime.Now;
     var dayNames = new[] { "Нд", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб" };
@@ -457,6 +461,110 @@
             .insight-text strong {
                 color: #111827;
             }
+        /* AI RECOMMENDATIONS */
+        .recommendations-section {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+        }
+
+        .recommendations-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .recommendations-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .recommendations-badge {
+            font-size: 11px;
+            background: #dcfce7;
+            color: #16a34a;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        .recommendations-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+
+        .recommendation-card {
+            display: grid;
+            grid-template-columns: 46px 1fr;
+            gap: 14px;
+            padding: 16px;
+            border-radius: 16px;
+            background: #f9fafb;
+            border: 1.5px solid #e5e7eb;
+        }
+
+            .recommendation-card.warning {
+                background: #fff7ed;
+                border-color: #fed7aa;
+            }
+
+            .recommendation-card.reminder {
+                background: #fefce8;
+                border-color: #fde68a;
+            }
+
+            .recommendation-card.advice {
+                background: #f0fdf4;
+                border-color: #bbf7d0;
+            }
+
+            .recommendation-card.insight {
+                background: #eff6ff;
+                border-color: #bfdbfe;
+            }
+
+            .recommendation-card.suggestion {
+                background: #f5f3ff;
+                border-color: #ddd6fe;
+            }
+
+        .recommendation-icon {
+            width: 46px;
+            height: 46px;
+            background: white;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+
+        .recommendation-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 6px;
+            color: #111827;
+        }
+
+        .recommendation-message {
+            font-size: 13px;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+
+        .recommendation-link {
+            display: inline-block;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #16a34a;
+            text-decoration: none;
+            font-weight: 600;
+        }
 
         /* TOAST */
         .toast {
@@ -536,6 +644,39 @@
                 <div class="stat-sub">середнє виконання</div>
             </div>
         </div>
+        @if (recommendations != null && recommendations.Any())
+        {
+            <div class="recommendations-section">
+                <div class="recommendations-header">
+                    <div class="recommendations-title">🤖 AI-рекомендації для тебе</div>
+                    <div class="recommendations-badge">Персонально</div>
+                </div>
+
+                <div class="recommendations-grid">
+                    @foreach (var item in recommendations)
+                    {
+                        <div class="recommendation-card @item.Type.ToLower()">
+                            <div class="recommendation-icon">@item.Icon</div>
+
+                            <div>
+                                <div class="recommendation-title">@item.Title</div>
+                                <div class="recommendation-message">@item.Message</div>
+
+                                @if (item.HabitId != null)
+                                {
+                                    <a asp-controller="Analytics"
+                                       asp-action="Index"
+                                       asp-route-habitId="@item.HabitId"
+                                       class="recommendation-link">
+                                        Переглянути аналітику →
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
 
         <!-- MAIN GRID -->
         <div class="main-grid">
