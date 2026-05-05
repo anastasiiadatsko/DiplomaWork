@@ -3,6 +3,7 @@ using HabitFlow.BLL.Interfaces;
 using HabitFlow.Domain.Entities;
 using HabitFlow.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
 
 namespace HabitFlow.BLL.Services
 {
@@ -122,6 +123,56 @@ namespace HabitFlow.BLL.Services
                 },
             };
 
+            BalanceWheelViewModel? balanceWheel = null;
+            string? strongestArea = null;
+            string? weakestArea = null;
+            double balanceAverage = 0;
+
+            if (!string.IsNullOrWhiteSpace(user?.OnboardingDescription) &&
+                user.OnboardingDescription.Contains("BalanceWheel"))
+            {
+                try
+                {
+                    using var document = JsonDocument.Parse(user.OnboardingDescription);
+                    var root = document.RootElement;
+
+                    if (root.TryGetProperty("BalanceWheel", out var balanceElement))
+                    {
+                        balanceWheel = new BalanceWheelViewModel
+                        {
+                            Health = balanceElement.GetProperty("Health").GetInt32(),
+                            Career = balanceElement.GetProperty("Career").GetInt32(),
+                            Finance = balanceElement.GetProperty("Finance").GetInt32(),
+                            Relationships = balanceElement.GetProperty("Relationships").GetInt32(),
+                            SelfDevelopment = balanceElement.GetProperty("SelfDevelopment").GetInt32(),
+                            Rest = balanceElement.GetProperty("Rest").GetInt32(),
+                            EmotionalState = balanceElement.GetProperty("EmotionalState").GetInt32(),
+                            Environment = balanceElement.GetProperty("Environment").GetInt32()
+                        };
+
+                        var areas = new Dictionary<string, int>
+            {
+                { "Здоров’я", balanceWheel.Health },
+                { "Кар’єра / навчання", balanceWheel.Career },
+                { "Фінанси", balanceWheel.Finance },
+                { "Стосунки", balanceWheel.Relationships },
+                { "Саморозвиток", balanceWheel.SelfDevelopment },
+                { "Відпочинок", balanceWheel.Rest },
+                { "Емоційний стан", balanceWheel.EmotionalState },
+                { "Побут / оточення", balanceWheel.Environment }
+            };
+
+                        strongestArea = areas.OrderByDescending(x => x.Value).First().Key;
+                        weakestArea = areas.OrderBy(x => x.Value).First().Key;
+                        balanceAverage = areas.Average(x => x.Value);
+                    }
+                }
+                catch
+                {
+                    balanceWheel = null;
+                }
+            }
+
             return new ProfileViewModel
             {
                 User = user!,
@@ -132,6 +183,10 @@ namespace HabitFlow.BLL.Services
                 NextLevelAt = nextLevelAt,
                 ProgressPercent = Math.Min(progressPercent, 100),
                 Achievements = achievements,
+                BalanceWheel = balanceWheel,
+                StrongestBalanceArea = strongestArea,
+                WeakestBalanceArea = weakestArea,
+                BalanceAverage = balanceAverage,
             };
         }
 
@@ -185,10 +240,42 @@ namespace HabitFlow.BLL.Services
             user.OnboardingGoal = dto.Goal;
             user.OnboardingDescription = dto.Description;
             user.OnboardingTime = dto.AvailableTime;
-            user.IsOnboardingCompleted = true;
+
             await this.userRepository.UpdateAsync(user);
 
-            this.logger.LogInformation("Онбординг завершено: {UserId}", userId);
+            this.logger.LogInformation("Перший крок онбордингу збережено: {UserId}", userId);
+        }
+
+        public async Task SaveBalanceWheelAsync(Guid userId, BalanceWheelDto dto)
+        {
+            var user = await this.userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return;
+            }
+
+            var balanceWheelData = new
+            {
+                DailyDescription = user.OnboardingDescription,
+                BalanceWheel = new
+                {
+                    Health = dto.Health,
+                    Career = dto.Career,
+                    Finance = dto.Finance,
+                    Relationships = dto.Relationships,
+                    SelfDevelopment = dto.SelfDevelopment,
+                    Rest = dto.Rest,
+                    EmotionalState = dto.EmotionalState,
+                    Environment = dto.Environment
+                }
+            };
+
+            user.OnboardingDescription = JsonSerializer.Serialize(balanceWheelData);
+            user.IsOnboardingCompleted = true;
+
+            await this.userRepository.UpdateAsync(user);
+
+            this.logger.LogInformation("Колесо балансу збережено: {UserId}", userId);
         }
     }
 }

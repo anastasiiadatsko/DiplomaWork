@@ -14,5 +14,7 @@ namespace HabitFlow.BLL.Interfaces
         Task<(bool Success, string Error)> ChangePasswordAsync(Guid userId, ChangePasswordDto dto);
 
         Task SaveOnboardingAsync(Guid userId, OnboardingDto dto);
+
+        Task SaveBalanceWheelAsync(Guid userId, BalanceWheelDto dto);
     }
 }

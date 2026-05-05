@@ -331,6 +331,83 @@
             </div>
         </section>
 
+        @if (Model.BalanceWheel != null)
+{
+    <section class="card">
+        <div class="card-title">🧭 Моє колесо балансу</div>
+
+        <div style="display:grid; grid-template-columns: 260px 1fr; gap:24px; align-items:center;">
+            <svg viewBox="0 0 340 340" style="width:260px;height:260px;overflow:visible;">
+                <circle cx="170" cy="170" r="24" fill="none" stroke="#dcfce7" />
+                <circle cx="170" cy="170" r="48" fill="none" stroke="#dcfce7" />
+                <circle cx="170" cy="170" r="72" fill="none" stroke="#dcfce7" />
+                <circle cx="170" cy="170" r="96" fill="none" stroke="#dcfce7" />
+                <circle cx="170" cy="170" r="120" fill="none" stroke="#dcfce7" />
+
+                <line x1="170" y1="170" x2="170" y2="50" stroke="#bbf7d0" />
+                <line x1="170" y1="170" x2="254.9" y2="85.1" stroke="#bbf7d0" />
+                <line x1="170" y1="170" x2="290" y2="170" stroke="#bbf7d0" />
+                <line x1="170" y1="170" x2="254.9" y2="254.9" stroke="#bbf7d0" />
+                <line x1="170" y1="170" x2="170" y2="290" stroke="#bbf7d0" />
+                <line x1="170" y1="170" x2="85.1" y2="254.9" stroke="#bbf7d0" />
+                <line x1="170" y1="170" x2="50" y2="170" stroke="#bbf7d0" />
+                <line x1="170" y1="170" x2="85.1" y2="85.1" stroke="#bbf7d0" />
+
+                @{
+                    var values = new[]
+                    {
+                        Model.BalanceWheel.Health,
+                        Model.BalanceWheel.Career,
+                        Model.BalanceWheel.Finance,
+                        Model.BalanceWheel.Relationships,
+                        Model.BalanceWheel.SelfDevelopment,
+                        Model.BalanceWheel.Rest,
+                        Model.BalanceWheel.EmotionalState,
+                        Model.BalanceWheel.Environment
+                    };
+
+                    var points = new System.Text.StringBuilder();
+
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        var angle = (-90 + i * 45) * Math.PI / 180;
+                        var radius = values[i] / 10.0 * 120;
+                        var x = 170 + radius * Math.Cos(angle);
+                        var y = 170 + radius * Math.Sin(angle);
+
+                        points.Append($"{x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)} ");
+                    }
+                }
+
+                <polygon points="@points.ToString()"
+                         fill="rgba(22,163,74,0.32)"
+                         stroke="#16a34a"
+                         stroke-width="4"
+                         stroke-linejoin="round" />
+
+                <circle cx="170" cy="170" r="8" fill="#16a34a" />
+            </svg>
+
+            <div>
+                <div class="info-row">
+                    <span class="info-label">Середній баланс</span>
+                    <span class="info-value">@Model.BalanceAverage.ToString("F1") / 10</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Найсильніша сфера</span>
+                    <span class="info-value">@Model.StrongestBalanceArea</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Потребує уваги</span>
+                    <span class="info-value">@Model.WeakestBalanceArea</span>
+                </div>
+            </div>
+        </div>
+    </section>
+}
+
         <section class="card">
             <div class="card-title">🎯 Моя ціль</div>
             @if (Model.User.IsOnboardingCompleted) {

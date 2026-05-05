@@ -19,6 +19,14 @@ namespace HabitFlow.BLL.DTOs
         public int ProgressPercent { get; set; }
 
         public List<Achievement> Achievements { get; set; } = new();
+
+        public BalanceWheelViewModel? BalanceWheel { get; set; }
+
+        public string? StrongestBalanceArea { get; set; }
+
+        public string? WeakestBalanceArea { get; set; }
+
+        public double BalanceAverage { get; set; }
     }
 
     public class Achievement
@@ -30,5 +38,24 @@ namespace HabitFlow.BLL.DTOs
         public string Description { get; set; } = string.Empty;
 
         public bool IsUnlocked { get; set; }
+    }
+
+    public class BalanceWheelViewModel
+    {
+        public int Health { get; set; }
+
+        public int Career { get; set; }
+
+        public int Finance { get; set; }
+
+        public int Relationships { get; set; }
+
+        public int SelfDevelopment { get; set; }
+
+        public int Rest { get; set; }
+
+        public int EmotionalState { get; set; }
+
+        public int Environment { get; set; }
     }
 }
