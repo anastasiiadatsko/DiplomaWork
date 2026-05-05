@@ -37,14 +37,19 @@ namespace HabitFlow.BLL.Services
                 .OrderBy(l => l.ScheduledDate)
                 .ToList();
 
-            var today = DateTime.UtcNow.Date;
+            var today = DateTime.Today;
             var daysSinceStart = Math.Max(1, (today - habit.StartDate.Date).Days + 1);
 
             // Базові метрики
             var currentStreak = this.CalculateCurrentStreak(completedLogs);
             var maxStreak = this.CalculateMaxStreak(completedLogs);
+            var completedUniqueDays = completedLogs
+    .Select(l => l.ScheduledDate.Date)
+    .Distinct()
+    .Count();
+
             var consistencyRate = Math.Round(
-                (double)completedLogs.Count / daysSinceStart * 100, 2);
+                Math.Min((double)completedUniqueDays / daysSinceStart * 100, 100), 2);
 
             // Щоденні логи для графіка
             var dailyLogs = this.BuildDailyLogs(completedLogs, habit.StartDate, today);
@@ -521,31 +526,50 @@ namespace HabitFlow.BLL.Services
         // ДОПОМІЖНІ АЛГОРИТМИ
         // ============================================================
 
+
         private int CalculateCurrentStreak(
-            List<HabitFlow.Domain.Entities.HabitLog> logs)
+    List<HabitFlow.Domain.Entities.HabitLog> logs)
         {
             if (!logs.Any())
             {
                 return 0;
             }
 
-            var today = DateTime.UtcNow.Date;
-            if ((today - logs.Last().ScheduledDate.Date).Days > 1)
+            var dates = logs
+                .Select(l => l.ScheduledDate.Date)
+                .Distinct()
+                .OrderByDescending(d => d)
+                .ToList();
+
+            bool doneToday = dates.Contains(DateTime.Today);
+            bool doneYesterday = dates.Contains(DateTime.Today.AddDays(-1));
+
+            DateTime startDate;
+
+            if (doneToday)
+            {
+                startDate = DateTime.Today;
+            }
+            else if (doneYesterday)
+            {
+                startDate = DateTime.Today.AddDays(-1);
+            }
+            else
             {
                 return 0;
             }
 
             int streak = 0;
-            var checkDate = today;
+            var current = startDate;
 
-            for (int i = logs.Count - 1; i >= 0; i--)
+            foreach (var date in dates)
             {
-                if (logs[i].ScheduledDate.Date == checkDate)
+                if (date == current)
                 {
                     streak++;
-                    checkDate = checkDate.AddDays(-1);
+                    current = current.AddDays(-1);
                 }
-                else if (logs[i].ScheduledDate.Date < checkDate)
+                else if (date < current)
                 {
                     break;
                 }
@@ -555,19 +579,26 @@ namespace HabitFlow.BLL.Services
         }
 
         private int CalculateMaxStreak(
-            List<HabitFlow.Domain.Entities.HabitLog> logs)
+    List<HabitFlow.Domain.Entities.HabitLog> logs)
         {
             if (!logs.Any())
             {
                 return 0;
             }
 
-            int max = 1, current = 1;
+            var dates = logs
+                .Select(l => l.ScheduledDate.Date)
+                .Distinct()
+                .OrderBy(d => d)
+                .ToList();
 
-            for (int i = 1; i < logs.Count; i++)
+            int max = 1;
+            int current = 1;
+
+            for (int i = 1; i < dates.Count; i++)
             {
-                var diff = (logs[i].ScheduledDate.Date
-                          - logs[i - 1].ScheduledDate.Date).Days;
+                var diff = (dates[i] - dates[i - 1]).Days;
+
                 if (diff == 1)
                 {
                     current++;

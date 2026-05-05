@@ -767,14 +767,21 @@
 
 
     <script>
-
         const next7 = @Html.Raw(next7Json);
         const trendLine = @Html.Raw(trendJson);
         const mnkPoints = @Html.Raw(mnkPointsJson);
 
+        function getDay(point) {
+            return point.Day ?? point.day;
+        }
+
+        function getValue(point) {
+            return point.Value ?? point.value;
+        }
+
         const lastX =
             trendLine.length > 0
-                ? trendLine[trendLine.length - 1].day
+                ? getDay(trendLine[trendLine.length - 1])
                 : 90;
 
         new Chart(
@@ -783,6 +790,7 @@
                 type: 'doughnut',
                 data: {
                     datasets: [{
+                        label: 'Міцність звички',
                         data: [@Model.HabitStrengthScore, 100 - @Model.HabitStrengthScore],
                         backgroundColor: ['@hssColor', '#eee'],
                         borderWidth: 0
@@ -805,28 +813,60 @@
                 data: {
                     datasets: [
                         {
-                            data: mnkPoints.map(x => ({ x: x.day, y: x.value })),
+                            label: 'Фактичний прогрес',
+                            data: mnkPoints.map(x => ({ x: getDay(x), y: getValue(x) })),
                             borderColor: '@Model.HabitColor',
-                            fill: false
+                            backgroundColor: '@Model.HabitColor',
+                            borderWidth: 3,
+                            pointRadius: 4,
+                            fill: false,
+                            tension: 0.35
                         },
                         {
-                            data: trendLine.map(x => ({ x: x.day, y: x.value })),
+                            label: 'Лінія тренду',
+                            data: trendLine.map(x => ({ x: getDay(x), y: getValue(x) })),
                             borderColor: '#f59e0b',
-                            borderDash: [5, 5]
+                            backgroundColor: '#f59e0b',
+                            borderDash: [5, 5],
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.35
                         },
                         {
+                            label: 'Ціль 66 виконань',
                             data: [
                                 { x: 0, y: 66 },
                                 { x: lastX, y: 66 }
                             ],
                             borderColor: '#86efac',
-                            borderDash: [3, 3]
+                            backgroundColor: '#86efac',
+                            borderDash: [3, 3],
+                            borderWidth: 2,
+                            pointRadius: 0,
+                            fill: false
                         }
                     ]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false
+                    maintainAspectRatio: false,
+                    parsing: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: {
+                                display: true,
+                                text: 'День'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Кількість виконань'
+                            }
+                        }
+                    }
                 }
             });
 
@@ -835,15 +875,27 @@
             {
                 type: 'bar',
                 data: {
-                    labels: ['1', '2', '3', '4', '5', '6', '7'],
+                    labels: ['1 день', '2 день', '3 день', '4 день', '5 день', '6 день', '7 день'],
                     datasets: [{
+                        label: 'Ймовірність виконання, %',
                         data: next7,
+                        backgroundColor: '#93c5fd',
                         borderRadius: 8
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Ймовірність, %'
+                            }
+                        }
+                    }
                 }
             });
 
@@ -860,7 +912,6 @@
                 arrow.textContent = "▶";
             }
         }
-
     </script>
 
 </body>
