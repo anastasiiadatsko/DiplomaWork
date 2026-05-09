@@ -16,10 +16,14 @@ namespace HabitFlow.DAL.Repositories
 
         public async Task<HabitLog?> GetByDateAsync(Guid habitId, DateTime date)
         {
+            var startOfDay = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+            var nextDay = startOfDay.AddDays(1);
+
             return await context.HabitLogs
                 .FirstOrDefaultAsync(l =>
                     l.HabitId == habitId &&
-                    l.ScheduledDate.Date == date.Date);
+                    l.ScheduledDate >= startOfDay &&
+                    l.ScheduledDate < nextDay);
         }
 
         public async Task<List<HabitLog>> GetByHabitIdAsync(Guid habitId)

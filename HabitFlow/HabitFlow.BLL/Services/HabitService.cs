@@ -24,6 +24,9 @@ namespace HabitFlow.BLL.Services
             this.logger = logger;
         }
 
+        private static DateTime UtcDate(DateTime dt)
+            => DateTime.SpecifyKind(dt.Date, DateTimeKind.Utc);
+
         public async Task<DashboardViewModel> GetDashboardAsync(Guid userId, string userName)
         {
             var habits = await this.habitRepository.GetByUserIdAsync(userId);
@@ -39,9 +42,7 @@ namespace HabitFlow.BLL.Services
                 habitDtos.Add(dto);
 
                 if (this.IsScheduledToday(habit, today))
-                {
                     todayHabits.Add(dto);
-                }
             }
 
             var totalCompleted = await this.habitLogRepository
@@ -52,12 +53,8 @@ namespace HabitFlow.BLL.Services
             {
                 var logs = await this.habitLogRepository.GetByHabitIdAsync(habit.Id);
                 foreach (var log in logs)
-                {
                     allLogs.Add((log.ScheduledDate.Date, log.Status == LogStatus.Completed));
-                }
             }
-
-            var heatmap = this.BuildHeatmap(allLogs);
 
             return new DashboardViewModel
             {
@@ -70,7 +67,7 @@ namespace HabitFlow.BLL.Services
                 OverallConsistencyRate = habitDtos.Any()
                     ? Math.Round(habitDtos.Average(h => h.ConsistencyRate), 1)
                     : 0,
-                HeatmapData = heatmap,
+                HeatmapData = this.BuildHeatmap(allLogs),
             };
         }
 
@@ -95,9 +92,7 @@ namespace HabitFlow.BLL.Services
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
             if (habit == null || habit.UserId != userId)
-            {
                 return null;
-            }
 
             var logs = await this.habitLogRepository.GetByHabitIdAsync(habitId);
             return this.MapToDto(habit, logs, DateTime.Today);
@@ -115,7 +110,7 @@ namespace HabitFlow.BLL.Services
                 FrequencyType = dto.FrequencyType,
                 TargetDaysJson = JsonSerializer.Serialize(dto.TargetDays),
                 Color = dto.Color,
-                StartDate = DateTime.Today,
+                StartDate = UtcDate(DateTime.Today),
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
             };
@@ -128,9 +123,7 @@ namespace HabitFlow.BLL.Services
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
             if (habit == null || habit.UserId != userId)
-            {
                 return;
-            }
 
             habit.Name = dto.Name;
             habit.Description = dto.Description;
@@ -147,9 +140,7 @@ namespace HabitFlow.BLL.Services
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
             if (habit == null || habit.UserId != userId)
-            {
                 return;
-            }
 
             await this.habitRepository.DeleteAsync(habitId);
             this.logger.LogInformation("Звичка видалена: {HabitId}", habitId);
@@ -159,11 +150,9 @@ namespace HabitFlow.BLL.Services
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
             if (habit == null || habit.UserId != userId)
-            {
                 return false;
-            }
 
-            var today = DateTime.Today;
+            var today = UtcDate(DateTime.Today);
             var existingLog = await this.habitLogRepository.GetByDateAsync(habitId, today);
 
             if (existingLog != null)
@@ -178,7 +167,7 @@ namespace HabitFlow.BLL.Services
                 else
                 {
                     existingLog.Status = LogStatus.Completed;
-                    existingLog.CompletedAt = DateTime.Now;
+                    existingLog.CompletedAt = DateTime.UtcNow;
                     await this.habitLogRepository.UpdateAsync(existingLog);
                     return true;
                 }
@@ -190,7 +179,7 @@ namespace HabitFlow.BLL.Services
                 HabitId = habitId,
                 UserId = userId,
                 ScheduledDate = today,
-                CompletedAt = DateTime.Now,
+                CompletedAt = DateTime.UtcNow,
                 Status = LogStatus.Completed,
             };
 
@@ -203,15 +192,82 @@ namespace HabitFlow.BLL.Services
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
             if (habit == null || habit.UserId != userId)
-            {
                 return;
-            }
 
             habit.IsActive = !habit.IsActive;
             await this.habitRepository.UpdateAsync(habit);
         }
 
-        // ===== PRIVATE HELPERS =====
+        public async Task ManualLogAsync(Guid userId, ManualLogDto dto)
+        {
+            var habit = await this.habitRepository.GetByIdAsync(dto.HabitId);
+            if (habit == null || habit.UserId != userId)
+                return;
+
+            var date = UtcDate(dto.Date);
+
+            var existing = await this.habitLogRepository.GetByDateAsync(dto.HabitId, date);
+
+            if (existing != null)
+            {
+                existing.Status = LogStatus.Completed;
+                existing.CompletedAt = date;
+                existing.Note = dto.Note;
+                await this.habitLogRepository.UpdateAsync(existing);
+                return;
+            }
+
+            await this.habitLogRepository.AddAsync(new HabitLog
+            {
+                Id = Guid.NewGuid(),
+                HabitId = dto.HabitId,
+                UserId = userId,
+                ScheduledDate = date,
+                CompletedAt = date,
+                Status = LogStatus.Completed,
+                Note = dto.Note,
+            });
+
+            this.logger.LogInformation(
+                "Ручний лог: {HabitId} за {Date}", dto.HabitId, date);
+        }
+
+        public async Task ManualLogRangeAsync(
+            Guid userId, Guid habitId, DateTime from, DateTime to)
+        {
+            var habit = await this.habitRepository.GetByIdAsync(habitId);
+            if (habit == null || habit.UserId != userId)
+                return;
+
+            for (var d = from.Date; d <= to.Date; d = d.AddDays(1))
+            {
+                var date = UtcDate(d);
+                var existing = await this.habitLogRepository.GetByDateAsync(habitId, date);
+
+                if (existing != null)
+                {
+                    existing.Status = LogStatus.Completed;
+                    existing.CompletedAt = date;
+                    await this.habitLogRepository.UpdateAsync(existing);
+                    continue;
+                }
+
+                await this.habitLogRepository.AddAsync(new HabitLog
+                {
+                    Id = Guid.NewGuid(),
+                    HabitId = habitId,
+                    UserId = userId,
+                    ScheduledDate = date,
+                    CompletedAt = date,
+                    Status = LogStatus.Completed,
+                });
+            }
+
+            this.logger.LogInformation(
+                "Діапазон логів: {HabitId} з {From} по {To}", habitId, from, to);
+        }
+
+        // ── PRIVATE HELPERS ───────────────────────────────────────────────
 
         private HabitDto MapToDto(Habit habit, List<HabitLog> logs, DateTime today)
         {
@@ -221,7 +277,7 @@ namespace HabitFlow.BLL.Services
                 .ToList();
 
             var isCompletedToday = logs.Any(l =>
-                l.ScheduledDate.Date == today &&
+                l.ScheduledDate.Date == today.Date &&
                 l.Status == LogStatus.Completed);
 
             var targetDays = new List<DayOfWeek>();
@@ -251,33 +307,26 @@ namespace HabitFlow.BLL.Services
 
         private int CalculateStreak(List<HabitLog> completedLogs)
         {
-            if (!completedLogs.Any())
-                return 0;
+            if (!completedLogs.Any()) return 0;
+
+            var today = DateTime.Today;
 
             var dates = completedLogs
                 .Select(l => l.ScheduledDate.Date)
                 .Distinct()
                 .OrderByDescending(d => d)
                 .ToList();
-            
 
-            bool doneToday = dates.Contains(DateTime.Today);
-            bool doneYesterday = dates.Contains(DateTime.Today.AddDays(-1));
+            bool doneToday = dates.Any(d => d == today);
+            bool doneYesterday = dates.Any(d => d == today.AddDays(-1));
 
             DateTime startDate;
-
             if (doneToday)
-            {
-                startDate = DateTime.Today;
-            }
+                startDate = today;
             else if (doneYesterday)
-            {
-                startDate = DateTime.Today.AddDays(-1);
-            }
+                startDate = today.AddDays(-1);
             else
-            {
                 return 0;
-            }
 
             int streak = 0;
             DateTime current = startDate;
@@ -301,19 +350,15 @@ namespace HabitFlow.BLL.Services
         private double CalculateConsistencyRate(Habit habit, List<HabitLog> completedLogs)
         {
             var daysSinceStart = (DateTime.Today - habit.StartDate.Date).Days + 1;
-            if (daysSinceStart <= 0)
-            {
-                return 0;
-            }
+            if (daysSinceStart <= 0) return 0;
 
             var completedUniqueDays = completedLogs
                 .Select(l => l.ScheduledDate.Date)
                 .Distinct()
                 .Count();
 
-            var rate = (double)completedUniqueDays / daysSinceStart * 100;
-
-            return Math.Round(Math.Min(rate, 100), 1);
+            return Math.Round(
+                Math.Min((double)completedUniqueDays / daysSinceStart * 100, 100), 1);
         }
 
         private bool IsScheduledToday(Habit habit, DateTime today)
@@ -338,75 +383,6 @@ namespace HabitFlow.BLL.Services
                 return new();
             }
         }
-        public async Task ManualLogAsync(Guid userId, ManualLogDto dto)
-        {
-            var habit = await this.habitRepository.GetByIdAsync(dto.HabitId);
-            if (habit == null || habit.UserId != userId)
-            {
-                return;
-            }
-
-            var existing = await this.habitLogRepository
-                .GetByDateAsync(dto.HabitId, dto.Date.Date);
-
-            if (existing != null)
-            {
-                existing.Status = Domain.Enums.LogStatus.Completed;
-                existing.CompletedAt = dto.Date.Date;
-                existing.Note = dto.Note;
-                await this.habitLogRepository.UpdateAsync(existing);
-                return;
-            }
-
-            await this.habitLogRepository.AddAsync(new Domain.Entities.HabitLog
-            {
-                Id = Guid.NewGuid(),
-                HabitId = dto.HabitId,
-                UserId = userId,
-                ScheduledDate = dto.Date.Date,
-                CompletedAt = dto.Date.Date,
-                Status = Domain.Enums.LogStatus.Completed,
-                Note = dto.Note,
-            });
-
-            this.logger.LogInformation(
-                "Ручний лог: {HabitId} за {Date}", dto.HabitId, dto.Date.Date);
-        }
-
-        public async Task ManualLogRangeAsync(
-            Guid userId, Guid habitId, DateTime from, DateTime to)
-        {
-            var habit = await this.habitRepository.GetByIdAsync(habitId);
-            if (habit == null || habit.UserId != userId)
-            {
-                return;
-            }
-
-            for (var date = from.Date; date <= to.Date; date = date.AddDays(1))
-            {
-                var existing = await this.habitLogRepository.GetByDateAsync(habitId, date);
-                if (existing != null)
-                {
-                    existing.Status = Domain.Enums.LogStatus.Completed;
-                    existing.CompletedAt = date;
-                    await this.habitLogRepository.UpdateAsync(existing);
-                    continue;
-                }
-
-                await this.habitLogRepository.AddAsync(new Domain.Entities.HabitLog
-                {
-                    Id = Guid.NewGuid(),
-                    HabitId = habitId,
-                    UserId = userId,
-                    ScheduledDate = date,
-                    CompletedAt = date,
-                    Status = Domain.Enums.LogStatus.Completed,
-                });
-            }
-
-            this.logger.LogInformation(
-                "Діапазон логів: {HabitId} з {From} по {To}", habitId, from, to);
-        }
 
         private List<HeatmapDay> BuildHeatmap(List<(DateTime Date, bool Completed)> allLogs)
         {
@@ -416,23 +392,21 @@ namespace HabitFlow.BLL.Services
 
             for (var date = startDate; date <= endDate; date = date.AddDays(1))
             {
-                var dayLogs = allLogs.Where(l => l.Date == date).ToList();
+                var dayLogs = allLogs.Where(l => l.Date == date.Date).ToList();
                 var completedCount = dayLogs.Count(l => l.Completed);
-
-                var level = completedCount switch
-                {
-                    0 => 0,
-                    1 => 1,
-                    2 => 2,
-                    3 => 3,
-                    _ => 4,
-                };
 
                 result.Add(new HeatmapDay
                 {
                     Date = date,
                     CompletedCount = completedCount,
-                    Level = level,
+                    Level = completedCount switch
+                    {
+                        0 => 0,
+                        1 => 1,
+                        2 => 2,
+                        3 => 3,
+                        _ => 4,
+                    },
                 });
             }
 

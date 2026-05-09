@@ -4,78 +4,60 @@
 
 @{
     Layout = null;
-
     var habitId = ViewBag.HabitId;
 
-    var next7Json = JsonSerializer.Serialize(Model.Next7DaysProbabilities);
-    var weekdayJson = JsonSerializer.Serialize(Model.WeekdayStats);
-    var mnkPointsJson = JsonSerializer.Serialize(Model.MnkPoints);
-    var trendJson = JsonSerializer.Serialize(Model.MnkTrendLine);
+    // ── JSON для графіків ─────────────────────────────────────────────
+    // Використовуємо camelCase щоб JS читав point.day та point.value
+    var jsonOpts = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    var next7Json = JsonSerializer.Serialize(Model.Next7DaysProbabilities, jsonOpts);
+    var mnkPointsJson = JsonSerializer.Serialize(Model.MnkPoints, jsonOpts);
+    var trendJson = JsonSerializer.Serialize(Model.MnkTrendLine, jsonOpts);
 
-    string hssColor;
-    string hssEmoji;
-    string hssText;
+    // ── Кольори HSS ───────────────────────────────────────────────────
+    var hssColor = Model.HabitStrengthScore < 30 ? "#ef4444"
+        : Model.HabitStrengthScore < 60 ? "#f59e0b"
+        : Model.HabitStrengthScore < 80 ? "#3b82f6"
+        : "#16a34a";
 
-    if (Model.HabitStrengthScore < 30)
-    {
-        hssColor = "#ef4444";
-        hssEmoji = "🌱";
-        hssText = "Тільки починаєш. Головне — не здаватись!";
-    }
-    else if (Model.HabitStrengthScore < 60)
-    {
-        hssColor = "#f59e0b";
-        hssEmoji = "🌿";
-        hssText = "Є прогрес! Звичка починає закріплюватись.";
-    }
-    else if (Model.HabitStrengthScore < 80)
-    {
-        hssColor = "#3b82f6";
-        hssEmoji = "🌳";
-        hssText = "Сильна звичка. Ще трохи — і стане автоматичною.";
-    }
-    else
-    {
-        hssColor = "#16a34a";
-        hssEmoji = "🏆";
-        hssText = "Звичка повністю сформована. Ти молодець!";
-    }
+    var hssEmoji = Model.HabitStrengthScore < 30 ? "🌱"
+        : Model.HabitStrengthScore < 60 ? "🌿"
+        : Model.HabitStrengthScore < 80 ? "🌳"
+        : "🏆";
 
-    string riskColor;
-    string riskText;
+    var hssText = Model.HabitStrengthScore < 30
+        ? "Тільки починаєш. Головне — не здаватись!"
+        : Model.HabitStrengthScore < 60 ? "Є прогрес! Звичка починає закріплюватись."
+        : Model.HabitStrengthScore < 80 ? "Сильна звичка. Ще трохи — і стане автоматичною."
+        : "Звичка повністю сформована. Ти молодець!";
 
-    if (Model.BreakRisk < 25)
-    {
-        riskColor = "#16a34a";
-        riskText = "Низький — ти стабільний 💪";
-    }
-    else if (Model.BreakRisk < 50)
-    {
-        riskColor = "#f59e0b";
-        riskText = "Помірний — будь уважний ⚡";
-    }
-    else
-    {
-        riskColor = "#ef4444";
-        riskText = "Високий — постав нагадування ⚠️";
-    }
+    // ── Risk ──────────────────────────────────────────────────────────
+    var riskColor = Model.BreakRisk < 25 ? "#16a34a"
+        : Model.BreakRisk < 50 ? "#f59e0b"
+        : "#ef4444";
 
-    var p00Class = "cell-yellow";
-    var p01Class = "cell-red";
-    var p10Class = "cell-yellow";
-    var p11Class = "cell-red";
+    var riskText = Model.BreakRisk < 25
+        ? "Низький ризик — ти в хорошому ритмі 💪"
+        : Model.BreakRisk < 50 ? "Помірний ризик — будь уважна ⚡"
+        : "Є ризик зупинитись — постав нагадування ⚠️";
 
-    if (Model.TransitionMatrix.Length > 0)
-    {
-        p00Class = Model.TransitionMatrix[0][0] > 0.5 ? "cell-green" : "cell-yellow";
-        p01Class = Model.TransitionMatrix[0][1] < 0.3 ? "cell-green" : "cell-red";
-    }
+    // ── Прогноз формування ────────────────────────────────────────────
+    bool isFormed = Model.PredictedDaysToForm == 0;
+    bool isUnknown = Model.PredictedDaysToForm >= 200;
 
-    if (Model.TransitionMatrix.Length > 1)
-    {
-        p10Class = Model.TransitionMatrix[1][0] > 0.5 ? "cell-green" : "cell-yellow";
-        p11Class = Model.TransitionMatrix[1][1] < 0.3 ? "cell-green" : "cell-red";
-    }
+    // ── Марків — всі 4 переходи ───────────────────────────────────────
+    bool hasMatrix = Model.TransitionMatrix != null && Model.TransitionMatrix.Length > 1;
+    double p00 = hasMatrix ? Math.Round(Model.TransitionMatrix[0][0] * 100) : 0;
+    double p01 = hasMatrix ? Math.Round(Model.TransitionMatrix[0][1] * 100) : 0;
+    double p10 = hasMatrix ? Math.Round(Model.TransitionMatrix[1][0] * 100) : 0;
+    double p11 = hasMatrix ? Math.Round(Model.TransitionMatrix[1][1] * 100) : 0;
+
+    // ── Пояснення Маркова ─────────────────────────────────────────────
+    // Якщо пропустила→виконала > виконала→виконала — є проблема в даних
+    // (замало переходів). Відображаємо пояснення.
+    bool markovDataReliable = hasMatrix && Model.DaysSinceStart >= 14;
+
+    // Різниця між станами — скільки дає "гарний" день
+    double skipImpactVal = Model.SkipImpact > 0 ? Model.SkipImpact : Math.Max(0, p00 - p10);
 }
 
 <!DOCTYPE html>
@@ -83,13 +65,9 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>HabitFlow Analytics</title>
-
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-
+    <title>@Model.HabitName — Аналітика</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-
         * {
             margin: 0;
             padding: 0;
@@ -99,19 +77,23 @@
         body {
             font-family: Inter,sans-serif;
             background: #f0fdf4;
+            color: #111827;
         }
 
         .navbar {
             background: white;
-            padding: 15px 30px;
+            padding: 14px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             box-shadow: 0 2px 8px rgba(0,0,0,.05);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
 
         .logo {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 700;
             color: #16a34a;
             text-decoration: none;
@@ -119,74 +101,115 @@
 
         .nav-links {
             display: flex;
-            gap: 10px;
+            gap: 8px;
         }
 
         .nav-link, .btn-logout {
             text-decoration: none;
-            padding: 9px 14px;
+            padding: 8px 14px;
             border-radius: 10px;
             color: #374151;
             background: #f9fafb;
             font-size: 14px;
+            border: none;
+            cursor: pointer;
         }
 
         .container {
             max-width: 1050px;
-            margin: 30px auto;
-            padding: 0 20px 50px;
+            margin: 0 auto;
+            padding: 28px 20px 60px;
+        }
+
+        /* ── banner ── */
+        .insight-banner {
+            background: white;
+            border-left: 4px solid #16a34a;
+            border-radius: 16px;
+            padding: 18px 22px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.05);
+        }
+
+        .insight-banner-title {
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 6px;
+        }
+
+        .insight-banner-text {
+            color: #374151;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .insight-banner-tip {
+            margin-top: 10px;
+            background: #f0fdf4;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 13px;
+            color: #15803d;
         }
 
         .page-header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
+            align-items: flex-start;
+            margin-bottom: 22px;
+            flex-wrap: wrap;
+            gap: 12px;
         }
 
         .habit-title {
             display: flex;
             align-items: center;
             gap: 10px;
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
         }
 
         .habit-dot {
-            width: 15px;
-            height: 15px;
+            width: 14px;
+            height: 14px;
             border-radius: 50%;
+            flex-shrink: 0;
         }
 
         .page-subtitle {
-            margin-top: 6px;
+            margin-top: 5px;
             color: #6b7280;
             font-size: 14px;
         }
 
-        .btn-manual {
+        .btn-add {
             background: #dbeafe;
             color: #2563eb;
             padding: 11px 18px;
             text-decoration: none;
             border-radius: 12px;
             font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
         }
 
+        /* ── HSS ── */
         .hss-card {
             background: white;
-            padding: 30px;
-            border-radius: 24px;
+            padding: 26px;
+            border-radius: 22px;
             display: flex;
-            gap: 30px;
-            box-shadow: 0 3px 20px rgba(0,0,0,.05);
-            margin-bottom: 22px;
+            gap: 26px;
+            box-shadow: 0 3px 16px rgba(0,0,0,.05);
+            margin-bottom: 18px;
+            align-items: center;
         }
 
         .hss-circle {
-            width: 150px;
-            height: 150px;
+            width: 140px;
+            height: 140px;
             position: relative;
+            flex-shrink: 0;
         }
 
         .hss-center {
@@ -198,7 +221,7 @@
         }
 
         .hss-value {
-            font-size: 38px;
+            font-size: 36px;
             font-weight: 700;
         }
 
@@ -207,51 +230,80 @@
             color: #9ca3af;
         }
 
-        .hss-info h2 {
-            font-size: 22px;
-            margin-bottom: 10px;
+        .hss-info {
+            flex: 1;
         }
 
-        .hss-info p {
-            color: #6b7280;
-            line-height: 1.6;
-            margin-bottom: 15px;
-        }
+            .hss-info h2 {
+                font-size: 19px;
+                margin-bottom: 8px;
+            }
+
+            .hss-info p {
+                color: #6b7280;
+                line-height: 1.6;
+                margin-bottom: 12px;
+                font-size: 14px;
+            }
 
         .hss-progress-track {
-            height: 10px;
+            height: 8px;
             background: #f3f4f6;
-            border-radius: 7px;
+            border-radius: 6px;
             overflow: hidden;
         }
 
         .hss-progress-fill {
             height: 100%;
+            border-radius: 6px;
         }
 
+        .hss-legend {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            font-size: 11px;
+            color: #9ca3af;
+        }
+
+            .hss-legend span {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+
+        .ldot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        /* ── stats row ── */
         .stats-row {
             display: grid;
             grid-template-columns: repeat(4,1fr);
             gap: 14px;
-            margin: 20px 0;
+            margin-bottom: 18px;
         }
 
         .stat-card {
             background: white;
-            padding: 22px;
+            padding: 20px;
             border-radius: 18px;
             text-align: center;
             box-shadow: 0 2px 10px rgba(0,0,0,.04);
         }
 
         .stat-emoji {
-            font-size: 30px;
+            font-size: 28px;
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .stat-value {
-            font-size: 34px;
+            font-size: 30px;
             font-weight: 700;
             display: block;
         }
@@ -259,13 +311,23 @@
         .stat-label {
             font-size: 12px;
             color: #9ca3af;
+            display: block;
+            margin-top: 2px;
         }
 
+        .stat-hint {
+            font-size: 11px;
+            color: #d1d5db;
+            display: block;
+            margin-top: 3px;
+        }
+
+        /* ── insights 3-col ── */
         .insights-row {
             display: grid;
             grid-template-columns: repeat(3,1fr);
-            gap: 15px;
-            margin-bottom: 22px;
+            gap: 14px;
+            margin-bottom: 18px;
         }
 
         .insight-card {
@@ -275,20 +337,21 @@
             box-shadow: 0 2px 10px rgba(0,0,0,.04);
         }
 
-        .insight-header {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 15px;
+        .insight-icon {
+            font-size: 22px;
+            margin-bottom: 6px;
         }
 
-        .insight-title {
-            font-weight: 700;
-            font-size: 13px;
+        .insight-label {
+            font-size: 11px;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 4px;
         }
 
         .insight-value {
-            font-size: 25px;
+            font-size: 22px;
             font-weight: 700;
             margin-bottom: 6px;
         }
@@ -299,43 +362,49 @@
             line-height: 1.5;
         }
 
-        .insight-tip {
+        .insight-explain {
             margin-top: 10px;
-            padding: 10px;
-            border-radius: 10px;
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 8px 10px;
             font-size: 12px;
+            color: #6b7280;
+            line-height: 1.5;
         }
 
+        /* ── charts ── */
         .charts-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 18px;
+            margin-bottom: 18px;
         }
 
         .chart-card {
             background: white;
-            padding: 24px;
-            border-radius: 22px;
-            box-shadow: 0 2px 15px rgba(0,0,0,.05);
+            padding: 22px;
+            border-radius: 20px;
+            box-shadow: 0 2px 14px rgba(0,0,0,.05);
         }
 
         .chart-title {
             font-weight: 700;
-            margin-bottom: 5px;
+            font-size: 15px;
+            margin-bottom: 4px;
         }
 
         .chart-subtitle {
             font-size: 12px;
             color: #9ca3af;
-            margin-bottom: 15px;
+            margin-bottom: 14px;
         }
 
         .chart-wrap {
-            height: 230px;
+            height: 220px;
             position: relative;
         }
 
+        /* ── weekday ── */
         .weekday-list {
             display: flex;
             flex-direction: column;
@@ -349,7 +418,7 @@
         }
 
         .weekday-name {
-            width: 30px;
+            width: 28px;
             font-weight: 600;
             font-size: 12px;
         }
@@ -364,86 +433,114 @@
 
         .weekday-fill {
             height: 100%;
+            border-radius: 6px;
         }
 
         .weekday-pct {
-            width: 42px;
+            width: 44px;
             font-size: 12px;
             font-weight: 700;
+            text-align: right;
         }
 
-        .matrix-wrap {
-            display: grid;
-            grid-template-columns: auto 1fr 1fr;
-            gap: 8px;
-        }
-
-        .matrix-header {
-            font-size: 11px;
-            text-align: center;
-            color: #9ca3af;
-        }
-
-        .matrix-row-label {
-            font-size: 12px;
+        /* ── markov cards ── */
+        .markov-cards {
             display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .markov-row {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
+            font-size: 13px;
         }
 
-        .matrix-cell {
-            padding: 10px;
-            text-align: center;
-            border-radius: 10px;
+        .markov-row-label {
+            color: #374151;
+            line-height: 1.4;
+        }
+
+        .markov-prob {
+            font-size: 20px;
             font-weight: 700;
+            margin-left: 12px;
+            flex-shrink: 0;
         }
 
-        .cell-green {
-            background: #dcfce7;
-            color: #15803d;
+        .markov-stationary {
+            background: #f0fdf4;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 13px;
+            color: #374151;
+            line-height: 1.5;
         }
 
-        .cell-red {
-            background: #fee2e2;
-            color: #dc2626;
+        .markov-note {
+            margin-top: 8px;
+            font-size: 11px;
+            color: #9ca3af;
+            font-style: italic;
         }
 
-        .cell-yellow {
-            background: #fef9c3;
-            color: #ca8a04;
+        .markov-warn {
+            background: #fff7ed;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #92400e;
+            margin-bottom: 10px;
         }
 
+        /* ── math ── */
         .math-section {
             background: white;
-            padding: 25px;
-            border-radius: 20px;
-            box-shadow: 0 2px 15px rgba(0,0,0,.05);
+            padding: 22px;
+            border-radius: 18px;
+            box-shadow: 0 2px 12px rgba(0,0,0,.04);
+            margin-top: 4px;
         }
 
         .toggle-math {
             background: none;
             border: none;
-            font-size: 15px;
+            font-size: 14px;
             cursor: pointer;
             font-weight: 600;
+            color: #374151;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 0;
         }
 
         .math-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 14px;
-            margin-top: 20px;
+            gap: 12px;
+            margin-top: 16px;
         }
 
         .math-item {
             background: #f9fafb;
-            padding: 15px;
-            border-radius: 14px;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            line-height: 1.7;
         }
 
         .math-item-title {
             font-weight: 700;
-            margin-bottom: 8px;
-            font-size: 13px;
+            margin-bottom: 6px;
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
         }
 
         .math-formula {
@@ -453,53 +550,76 @@
             border-radius: 8px;
             font-family: monospace;
             font-size: 11px;
+            color: #374151;
         }
 
+        @@media (max-width:700px) {
+            .stats-row {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .insights-row {
+                grid-template-columns: 1fr;
+            }
+
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+
+            .math-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hss-card {
+                flex-direction: column;
+            }
+        }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <a asp-controller="Dashboard" asp-action="Index" class="logo">
-            HabitFlow
-        </a>
-
+        <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
         <div class="nav-links">
-            <a asp-controller="Dashboard" asp-action="Index" class="nav-link">🏠</a>
-            <a asp-controller="Habit" asp-action="Index" class="nav-link">📋</a>
-            <a asp-controller="Profile" asp-action="Index" class="nav-link">👤</a>
+            <a asp-controller="Dashboard" asp-action="Index" class="nav-link">🏠 Дашборд</a>
+            <a asp-controller="Habit" asp-action="Index" class="nav-link">📋 Звички</a>
             <a asp-controller="Auth" asp-action="Logout" class="btn-logout">Вийти</a>
         </div>
     </nav>
 
     <div class="container">
 
+        <!-- Header -->
         <div class="page-header">
             <div>
                 <div class="habit-title">
                     <span class="habit-dot" style="background:@Model.HabitColor"></span>
                     @Model.HabitName
                 </div>
-
-                <div class="page-subtitle">
-                    @Model.DaysSinceStart днів відстеження
-                </div>
+                <div class="page-subtitle">@Model.DaysSinceStart днів відстеження</div>
             </div>
-
-            <a asp-controller="Habit"
-               asp-action="ManualLog"
-               asp-route-id="@habitId"
-               class="btn-manual">
+            <a asp-controller="Habit" asp-action="ManualLog" asp-route-id="@habitId" class="btn-add">
                 📅 Додати виконання
             </a>
         </div>
 
+        <!-- Головний висновок -->
+        @if (!string.IsNullOrEmpty(Model.MainInsight))
+        {
+            <div class="insight-banner">
+                <div class="insight-banner-title">💡 Що відбувається з твоєю звичкою</div>
+                <div class="insight-banner-text">@Model.MainInsight</div>
+                @if (!string.IsNullOrEmpty(Model.ActionTip))
+                {
+                    <div class="insight-banner-tip">👉 @Model.ActionTip</div>
+                }
+            </div>
+        }
 
+        <!-- Міцність звички (HSS) -->
         <div class="hss-card">
-
             <div class="hss-circle">
                 <canvas id="hssGauge"></canvas>
-
                 <div class="hss-center">
                     <div class="hss-value" style="color:@hssColor">
                         @Model.HabitStrengthScore.ToString("F0")
@@ -507,292 +627,287 @@
                     <div class="hss-max">/100</div>
                 </div>
             </div>
-
-            <div class="hss-info" style="flex:1">
+            <div class="hss-info">
                 <h2>@hssEmoji Міцність звички</h2>
                 <p>@hssText</p>
-
                 <div class="hss-progress-track">
                     <div class="hss-progress-fill"
-                         style="width:@Model.HabitStrengthScore%;background:@hssColor">
-                    </div>
+                         style="width:@Model.HabitStrengthScore%;background:@hssColor"></div>
+                </div>
+                <div class="hss-legend">
+                    <span><span class="ldot" style="background:#ef4444"></span>0–30 Починаєш</span>
+                    <span><span class="ldot" style="background:#f59e0b"></span>30–60 Зростає</span>
+                    <span><span class="ldot" style="background:#3b82f6"></span>60–80 Сильна</span>
+                    <span><span class="ldot" style="background:#16a34a"></span>80–100 Автоматична</span>
                 </div>
             </div>
-
         </div>
 
-
+        <!-- 4 картки статистики -->
         <div class="stats-row">
-
             <div class="stat-card">
                 <span class="stat-emoji">🔥</span>
                 <span class="stat-value">@Model.CurrentStreak</span>
-                <span class="stat-label">Серія</span>
+                <span class="stat-label">Днів поспіль</span>
+                <span class="stat-hint">поточна серія</span>
             </div>
-
             <div class="stat-card">
                 <span class="stat-emoji">🏆</span>
                 <span class="stat-value">@Model.MaxStreak</span>
-                <span class="stat-label">Макс серія</span>
+                <span class="stat-label">Найдовша серія</span>
+                <span class="stat-hint">твій рекорд</span>
             </div>
-
             <div class="stat-card">
                 <span class="stat-emoji">📊</span>
                 <span class="stat-value">@Model.ConsistencyRate%</span>
-                <span class="stat-label">Consistency</span>
+                <span class="stat-label">Як часто виконуєш</span>
+                <span class="stat-hint">за весь час</span>
             </div>
-
             <div class="stat-card">
                 <span class="stat-emoji">✅</span>
                 <span class="stat-value">@Model.TotalCompleted</span>
-                <span class="stat-label">Виконань</span>
+                <span class="stat-label">Разів виконано</span>
+                <span class="stat-hint">з @Model.DaysSinceStart днів</span>
             </div>
-
         </div>
 
-
-
+        <!-- 3 insight картки -->
         <div class="insights-row">
 
+            <!-- Прогноз формування -->
             <div class="insight-card">
-                <div class="insight-header">
-                    <div>🎯</div>
-                    <div class="insight-title">Прогноз</div>
-                </div>
-
-                @if (Model.PredictedDaysToForm == 0)
+                <div class="insight-icon">🎯</div>
+                <div class="insight-label">Коли звичка закріпиться</div>
+                @if (isFormed)
                 {
-                    <div class="insight-value" style="color:#16a34a">Сформована</div>
+                    <div class="insight-value" style="color:#16a34a">Вже сформована!</div>
+                    <div class="insight-desc">Ти досягла мети в 66 виконань.</div>
+                }
+                else if (isUnknown)
+                {
+                    <div class="insight-value" style="color:#f59e0b">Тримай темп</div>
+                    <div class="insight-desc">Поточний прогрес стабільний. Продовжуй у тому ж темпі.</div>
                 }
                 else
                 {
-                    <div class="insight-value" style="color:#16a34a">
-                        ~@Model.PredictedDaysToForm днів
+                    <div class="insight-value" style="color:#16a34a">~@Model.PredictedDaysToForm днів</div>
+                    <div class="insight-desc">
+                        Орієнтовна дата: <strong>@Model.PredictedFormationDate.ToString("dd.MM.yyyy")</strong>
                     </div>
                 }
-
-                <div class="insight-desc">
-                    Метод МНК прогнозує дату:
-                    <strong>@Model.PredictedFormationDate.ToString("dd.MM.yyyy")</strong>
+                <div class="insight-explain">
+                    Наука каже: звичка формується після ~66 повторень.
+                    Прогноз розраховано методом МНК на основі твого темпу.
                 </div>
             </div>
 
-
+            <!-- Ризик пропустити -->
             <div class="insight-card">
-                <div class="insight-header">
-                    <div>⚡</div>
-                    <div class="insight-title">Ризик зламу</div>
+                <div class="insight-icon">⚡</div>
+                <div class="insight-label">Ймовірність пропустити завтра</div>
+                <div class="insight-value" style="color:@riskColor">@Model.BreakRisk%</div>
+                <div class="insight-desc">@riskText</div>
+                <div class="insight-explain">
+                    @if (Model.IsStreakActive)
+                    {
+                        <span>Серія активна. Розраховано як шанс зламати серію після виконання.</span>
+                    }
+                    else
+                    {
+                        <span>Серія зараз не активна. Розраховано як шанс знову пропустити після пропуску.</span>
+                    }
                 </div>
-
-                <div class="insight-value" style="color:@riskColor">
-                    @Model.BreakRisk%
-                </div>
-
-                <div class="insight-desc">
-                    @riskText
-                </div>
-
             </div>
 
-
+            <!-- Твої дні -->
             <div class="insight-card">
-                <div class="insight-header">
-                    <div>🎮</div>
-                    <div class="insight-title">Кращий день</div>
+                <div class="insight-icon">📅</div>
+                <div class="insight-label">Твої дні</div>
+                <div class="insight-value" style="color:#16a34a">@Model.OptimalDayToAct</div>
+                <div class="insight-desc">найлегший день для тебе</div>
+                <div class="insight-explain">
+                    Уникай або готуйся заздалегідь до
+                    <strong style="color:#ef4444">@Model.MostRiskyDay</strong> —
+                    саме в цей день найчастіше трапляються пропуски.
+                    Постав нагадування на ранок.
                 </div>
-
-                <div class="insight-value" style="color:#8b5cf6">
-                    @Model.OptimalDayToAct
-                </div>
-
-                <div class="insight-desc">
-                    Уникай:
-                    <strong style="color:#ef4444">
-                        @Model.MostRiskyDay
-                    </strong>
-                </div>
-
             </div>
 
         </div>
 
-
-
+        <!-- Графіки прогресу та прогнозу -->
         <div class="charts-row">
-
             <div class="chart-card">
-                <div class="chart-title">📈 Прогрес</div>
+                <div class="chart-title">📈 Графік прогресу</div>
+                <div class="chart-subtitle">
+                    Зелена лінія — твої виконання. Помаранчева — прогнозований темп. Пунктир — ціль 66.
+                </div>
                 <div class="chart-wrap">
                     <canvas id="mnkChart"></canvas>
                 </div>
             </div>
 
             <div class="chart-card">
-                <div class="chart-title">🔮 7 днів прогноз</div>
+                <div class="chart-title">🔮 Прогноз на 7 днів</div>
+                <div class="chart-subtitle">
+                    З якою ймовірністю ти виконаєш звичку кожен із наступних 7 днів
+                </div>
                 <div class="chart-wrap">
                     <canvas id="forecastChart"></canvas>
                 </div>
             </div>
-
         </div>
 
-
+        <!-- По днях тижня + Паттерни -->
         <div class="charts-row">
 
             <div class="chart-card">
-                <div class="chart-title">📅 По днях</div>
-
+                <div class="chart-title">📅 По днях тижня</div>
+                <div class="chart-subtitle">В який день ти виконуєш звичку найчастіше</div>
                 <div class="weekday-list">
-
                     @foreach (var stat in Model.WeekdayStats)
                     {
                         var color = stat.Rate >= 70 ? "#16a34a"
                         : stat.Rate >= 40 ? "#f59e0b"
                         : "#ef4444";
-
+                        var clamp = Math.Min(100.0, stat.Rate);
                         <div class="weekday-row">
                             <span class="weekday-name">@stat.Day</span>
-
                             <div class="weekday-track">
                                 <div class="weekday-fill"
-                                     style="width:@stat.Rate%;background:@color">
-                                </div>
+                                     style="width:@clamp%;background:@color"></div>
                             </div>
-
-                            <span class="weekday-pct"
-                                  style="color:@color">
-                                @stat.Rate%
-                            </span>
-
+                            <span class="weekday-pct" style="color:@color">@stat.Rate%</span>
                         </div>
                     }
-
                 </div>
             </div>
 
-
             <div class="chart-card">
+                <div class="chart-title">🔗 Твої паттерни поведінки</div>
+                <div class="chart-subtitle">Як один день впливає на наступний</div>
 
-                <div class="chart-title">
-                    🔗 Марков
+                @if (!markovDataReliable)
+                {
+                    <div class="markov-warn">
+                        ⚠️ Замало даних для точного розрахунку. Дані стануть надійнішими після 14+ днів відстеження.
+                    </div>
+                }
+
+                <div class="markov-cards">
+                    <div class="markov-row">
+                        <div class="markov-row-label">
+                            ✅ Якщо <strong>виконала вчора</strong> —<br />
+                            ймовірність виконати сьогодні
+                        </div>
+                        <div class="markov-prob" style="color:#16a34a">@p00%</div>
+                    </div>
+                    <div class="markov-row">
+                        <div class="markov-row-label">
+                            ❌ Якщо <strong>пропустила вчора</strong> —<br />
+                            ймовірність виконати сьогодні
+                        </div>
+                        <div class="markov-prob"
+                             style="color:@(p10 >= 60 ? "#16a34a" : "#f59e0b")">
+                            @p10%
+                        </div>
+                    </div>
                 </div>
 
-                <div class="matrix-wrap">
-
-                    <div></div>
-                    <div class="matrix-header">Виконаєш</div>
-                    <div class="matrix-header">Пропустиш</div>
-
-                    <div class="matrix-row-label">Після виконання</div>
-
-                    <div class="matrix-cell @p00Class">
-                        @((Model.TransitionMatrix.Length > 0) ?
-                            (Model.TransitionMatrix[0][0] * 100).ToString("F0") + "%" : "—")
-                    </div>
-
-                    <div class="matrix-cell @p01Class">
-                        @((Model.TransitionMatrix.Length > 0) ?
-                            (Model.TransitionMatrix[0][1] * 100).ToString("F0") + "%" : "—")
-                    </div>
-
-
-                    <div class="matrix-row-label">Після пропуску</div>
-
-                    <div class="matrix-cell @p10Class">
-                        @((Model.TransitionMatrix.Length > 1) ?
-                            (Model.TransitionMatrix[1][0] * 100).ToString("F0") + "%" : "—")
-                    </div>
-
-                    <div class="matrix-cell @p11Class">
-                        @((Model.TransitionMatrix.Length > 1) ?
-                            (Model.TransitionMatrix[1][1] * 100).ToString("F0") + "%" : "—")
-                    </div>
-
+                <div class="markov-stationary">
+                    У довгостроковому темпі ти виконуєш цю звичку приблизно
+                    <strong style="color:#16a34a">@Model.MarkovProbCompleted%</strong> днів.
+                    @if (skipImpactVal > 5)
+                    {
+                        <br />
+                        <span style="color:#6b7280">
+                            Один пропуск знижує шанси на @skipImpactVal.ToString("F0")%.
+                            Намагайся не пропускати двічі поспіль.
+                        </span>
+                    }
+                    else if (p10 > p00)
+                    {
+                        <br />
+                        <span style="color:#6b7280">
+                            Цікаво: після пропуску ти повертаєшся навіть краще ніж зазвичай.
+                            Не засмучуйся через одну перерву!
+                        </span>
+                    }
                 </div>
 
-                <br />
-
-                <div>
-                    Стаціонарна ймовірність виконання:
-                    <strong style="color:#16a34a">
-                        @($"{Model.MarkovProbCompleted}%")
-                    </strong>
+                <div class="markov-note">
+                    Розраховано на основі @Model.DaysSinceStart днів твоєї поведінки
                 </div>
-
             </div>
 
         </div>
 
-
-
+        <!-- Детальна математика -->
         <div class="math-section">
-
             <button class="toggle-math" onclick="toggleMath()">
                 <span id="toggleArrow">▶</span>
-                Детальна математика
+                Детальна математика (для розробника)
             </button>
 
             <div id="mathDetails" style="display:none">
-
                 <div class="math-grid">
-
                     <div class="math-item">
-                        <div class="math-item-title">МНК</div>
-                        a₀=@Model.MnkA0.ToString("F3") <br />
-                        a₁=@Model.MnkA1.ToString("F3") <br />
-                        a₂=@Model.MnkA2.ToString("F5")
-                        <div class="math-formula">
-                            y=a₀+a₁t+a₂t²
-                        </div>
+                        <div class="math-item-title">МНК — Метод найменших квадратів</div>
+                        a₀ = @Model.MnkA0.ToString("F4")<br />
+                        a₁ = @Model.MnkA1.ToString("F4")<br />
+                        a₂ = @Model.MnkA2.ToString("F5")
+                        <div class="math-formula">y = a₀ + a₁·t + a₂·t²</div>
                     </div>
-
                     <div class="math-item">
-                        <div class="math-item-title">Gradient</div>
-                        α=@Model.AlphaWeight.ToString("F2")
-                        β=@Model.BetaWeight.ToString("F2")
-                        γ=@Model.GammaWeight.ToString("F2")
-
-                        <div class="math-formula">
-                            L=(HSS-target)^2
-                        </div>
+                        <div class="math-item-title">HSS — Градієнтний спуск</div>
+                        α (серія) = @Model.AlphaWeight.ToString("F3")<br />
+                        β (consistency) = @Model.BetaWeight.ToString("F3")<br />
+                        γ (стабільність) = @Model.GammaWeight.ToString("F3")
+                        <div class="math-formula">HSS = α·streak + β·consist + γ·stab</div>
                     </div>
-
+                    <div class="math-item">
+                        <div class="math-item-title">Марківська матриця переходів</div>
+                        P(вик→вик) = @p00%<br />
+                        P(вик→проп) = @p01%<br />
+                        P(проп→вик) = @p10%<br />
+                        P(проп→проп) = @p11%
+                        <div class="math-formula">π = π·P (стаціонарний розподіл)</div>
+                    </div>
+                    <div class="math-item">
+                        <div class="math-item-title">Мінімакс (теорія ігор)</div>
+                        Оптимальний день: @Model.OptimalDayToAct<br />
+                        Ризиковий день: @Model.MostRiskyDay<br />
+                        Ризик зламу: @Model.BreakRisk%
+                        <div class="math-formula">maximin U(день, ризик)</div>
+                    </div>
                 </div>
-
             </div>
-
         </div>
 
     </div>
 
-
+    <!-- Chart.js перенесено в кінець body щоб гарантовано завантажився -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script>
+        // ── Дані з сервера ─────────────────────────────────────────────────
+        // camelCase бо JsonSerializerOptions.CamelCase у View
         const next7 = @Html.Raw(next7Json);
-        const trendLine = @Html.Raw(trendJson);
         const mnkPoints = @Html.Raw(mnkPointsJson);
+        const trendLine = @Html.Raw(trendJson);
+        const habitColor = '@Model.HabitColor';
 
-        function getDay(point) {
-            return point.Day ?? point.day;
-        }
+        // ── Утилітки ───────────────────────────────────────────────────────
+        const lastX = trendLine.length > 0 ? trendLine[trendLine.length - 1].day : 90;
 
-        function getValue(point) {
-            return point.Value ?? point.value;
-        }
-
-        const lastX =
-            trendLine.length > 0
-                ? getDay(trendLine[trendLine.length - 1])
-                : 90;
-
-        new Chart(
-            document.getElementById('hssGauge'),
-            {
+        // ── HSS Gauge ──────────────────────────────────────────────────────
+        const hssCtx = document.getElementById('hssGauge');
+        if (hssCtx) {
+            new Chart(hssCtx, {
                 type: 'doughnut',
                 data: {
                     datasets: [{
-                        label: 'Міцність звички',
-                        data: [@Model.HabitStrengthScore, 100 - @Model.HabitStrengthScore],
-                        backgroundColor: ['@hssColor', '#eee'],
+                        data: [@Model.HabitStrengthScore, @(100 - Model.HabitStrengthScore)],
+                        backgroundColor: ['@hssColor', '#f3f4f6'],
                         borderWidth: 0
                     }]
                 },
@@ -800,117 +915,110 @@
                     circumference: 270,
                     rotation: -135,
                     cutout: '75%',
-                    plugins: {
-                        legend: { display: false }
-                    }
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
                 }
             });
+        }
 
-        new Chart(
-            document.getElementById('mnkChart'),
-            {
-                type: 'line',
-                data: {
-                    datasets: [
-                        {
-                            label: 'Фактичний прогрес',
-                            data: mnkPoints.map(x => ({ x: getDay(x), y: getValue(x) })),
-                            borderColor: '@Model.HabitColor',
-                            backgroundColor: '@Model.HabitColor',
-                            borderWidth: 3,
-                            pointRadius: 4,
-                            fill: false,
-                            tension: 0.35
-                        },
-                        {
-                            label: 'Лінія тренду',
-                            data: trendLine.map(x => ({ x: getDay(x), y: getValue(x) })),
-                            borderColor: '#f59e0b',
-                            backgroundColor: '#f59e0b',
-                            borderDash: [5, 5],
-                            borderWidth: 3,
-                            pointRadius: 0,
-                            fill: false,
-                            tension: 0.35
-                        },
-                        {
-                            label: 'Ціль 66 виконань',
-                            data: [
-                                { x: 0, y: 66 },
-                                { x: lastX, y: 66 }
-                            ],
-                            borderColor: '#86efac',
-                            backgroundColor: '#86efac',
-                            borderDash: [3, 3],
-                            borderWidth: 2,
-                            pointRadius: 0,
-                            fill: false
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    parsing: false,
-                    scales: {
-                        x: {
-                            type: 'linear',
-                            title: {
-                                display: true,
-                                text: 'День'
+        // ── МНК Прогрес ────────────────────────────────────────────────────
+        const mnkCtx = document.getElementById('mnkChart');
+        if (mnkCtx) {
+            if (mnkPoints.length === 0) {
+                // Немає даних — показуємо повідомлення
+                mnkCtx.parentElement.innerHTML =
+                    '<div style="display:flex;align-items:center;justify-content:center;' +
+                    'height:100%;color:#9ca3af;font-size:14px;">Додай виконання щоб побачити графік</div>';
+            } else {
+                new Chart(mnkCtx, {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Фактичний прогрес',
+                                data: mnkPoints.map(p => ({ x: p.day, y: p.value })),
+                                borderColor: habitColor,
+                                backgroundColor: habitColor,
+                                borderWidth: 3, pointRadius: 4, fill: false, tension: 0.35
+                            },
+                            {
+                                label: 'Прогноз',
+                                data: trendLine.map(p => ({ x: p.day, y: p.value })),
+                                borderColor: '#f59e0b', borderDash: [5, 5],
+                                borderWidth: 2, pointRadius: 0, fill: false, tension: 0.35
+                            },
+                            {
+                                label: 'Ціль 66 виконань',
+                                data: [{ x: 0, y: 66 }, { x: lastX, y: 66 }],
+                                borderColor: '#86efac', borderDash: [3, 3],
+                                borderWidth: 2, pointRadius: 0, fill: false
                             }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false, parsing: false,
+                        scales: {
+                            x: { type: 'linear', title: { display: true, text: 'День' } },
+                            y: { title: { display: true, text: 'Виконань' }, beginAtZero: true }
                         },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Кількість виконань'
-                            }
-                        }
+                        plugins: { legend: { labels: { boxWidth: 12, font: { size: 11 } } } }
                     }
-                }
-            });
+                });
+            }
+        }
 
-        new Chart(
-            document.getElementById('forecastChart'),
-            {
-                type: 'bar',
-                data: {
-                    labels: ['1 день', '2 день', '3 день', '4 день', '5 день', '6 день', '7 день'],
-                    datasets: [{
-                        label: 'Ймовірність виконання, %',
-                        data: next7,
-                        backgroundColor: '#93c5fd',
-                        borderRadius: 8
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            max: 100,
-                            title: {
-                                display: true,
-                                text: 'Ймовірність, %'
+        // ── Прогноз 7 днів ─────────────────────────────────────────────────
+        const forecastCtx = document.getElementById('forecastChart');
+        if (forecastCtx) {
+            if (next7.length === 0) {
+                forecastCtx.parentElement.innerHTML =
+                    '<div style="display:flex;align-items:center;justify-content:center;' +
+                    'height:100%;color:#9ca3af;font-size:14px;">Недостатньо даних для прогнозу</div>';
+            } else {
+                // Формуємо реальні дати для міток
+                const today = new Date();
+                const dayLabels = Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date(today);
+                    d.setDate(d.getDate() + i + 1);
+                    return d.toLocaleDateString('uk-UA', { weekday: 'short', day: 'numeric' });
+                });
+
+                // Кольори: зелений ≥70%, синій ≥50%, рожевий <50%
+                const barColors = next7.map(v =>
+                    v >= 70 ? '#86efac' : v >= 50 ? '#93c5fd' : '#fca5a5'
+                );
+
+                new Chart(forecastCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: dayLabels,
+                        datasets: [{
+                            label: 'Ймовірність виконання, %',
+                            data: next7,
+                            backgroundColor: barColors,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: true, max: 100,
+                                title: { display: true, text: '%' }
                             }
-                        }
+                        },
+                        plugins: { legend: { display: false } }
                     }
-                }
-            });
+                });
+            }
+        }
 
+        // ── Розгортання математики ─────────────────────────────────────────
         function toggleMath() {
             const block = document.getElementById('mathDetails');
             const arrow = document.getElementById('toggleArrow');
-
-            if (block.style.display === "none") {
-                block.style.display = "block";
-                arrow.textContent = "▼";
-            }
-            else {
-                block.style.display = "none";
-                arrow.textContent = "▶";
-            }
+            const isHidden = block.style.display === 'none';
+            block.style.display = isHidden ? 'block' : 'none';
+            arrow.textContent = isHidden ? '▼' : '▶';
         }
     </script>
 

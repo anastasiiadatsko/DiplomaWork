@@ -27,68 +27,88 @@ namespace HabitFlow.BLL.Services
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
             if (habit == null || habit.UserId != userId)
-            {
                 return new AnalyticsViewModel();
-            }
 
-            var logs = await this.habitLogRepository.GetByHabitIdAsync(habitId);
-            var completedLogs = logs
+            var allLogs = await this.habitLogRepository.GetByHabitIdAsync(habitId);
+
+            var completedDates = allLogs
                 .Where(l => l.Status == LogStatus.Completed)
-                .OrderBy(l => l.ScheduledDate)
+                .Select(l => l.ScheduledDate.Date)
+                .Distinct()
+                .OrderBy(d => d)
                 .ToList();
 
             var today = DateTime.Today;
-            var daysSinceStart = Math.Max(1, (today - habit.StartDate.Date).Days + 1);
+            var startDate = habit.StartDate.Date;
+            var totalDays = Math.Max(1, (today - startDate).Days + 1);
 
-            // Базові метрики
-            var currentStreak = this.CalculateCurrentStreak(completedLogs);
-            var maxStreak = this.CalculateMaxStreak(completedLogs);
-            var completedUniqueDays = completedLogs
-    .Select(l => l.ScheduledDate.Date)
-    .Distinct()
-    .Count();
+            // ── Повна бінарна серія ────────────────────────────────
+            var completedSet = new HashSet<DateTime>(completedDates);
+            var series = Enumerable.Range(0, totalDays)
+                .Select(i => startDate.AddDays(i))
+                .Where(d => d <= today)
+                .Select(d => new DayRecord(d, completedSet.Contains(d)))
+                .ToList();
 
-            var consistencyRate = Math.Round(
-                Math.Min((double)completedUniqueDays / daysSinceStart * 100, 100), 2);
+            int n = series.Count;
 
-            // Щоденні логи для графіка
-            var dailyLogs = this.BuildDailyLogs(completedLogs, habit.StartDate, today);
+            // ── Базові метрики ─────────────────────────────────────
+            int totalCompleted = completedDates.Count;
+            double consistencyRate = Math.Round(totalCompleted * 100.0 / n, 2);
+            int currentStreak = this.CalcCurrentStreak(series);
+            int maxStreak = this.CalcMaxStreak(series);
 
-            // МНК апроксимація
-            var mnkPoints = this.BuildMnkPoints(completedLogs, habit.StartDate);
-            var (a0, a1, a2, trendLine) = this.CalculateMnk(mnkPoints, daysSinceStart);
-            var (predictedDays, formationDate) = this.PredictFormation(
-                a0, a1, a2, daysSinceStart);
+            // ── Статистика по днях тижня ───────────────────────────
+            var weekdayStats = this.CalcWeekdayStats(series);
 
-            // Марківські ланцюги
-            var (transMatrix, stationaryDist, next7, breakRisk) =
-                this.CalculateMarkovChains(completedLogs, daysSinceStart);
+            // ── МНК ───────────────────────────────────────────────
+            var mnkPoints = this.BuildMnkPoints(completedDates, startDate);
+            var (a0, a1, a2, trendLine) = this.CalculateMnk(mnkPoints, n);
+            var (predictedDays, formationDate) = this.PredictFormation(a0, a1, a2, n);
 
-            // HSS з градієнтним спуском
-            var (hss, alpha, beta, gamma) = this.CalculateHssWithGradient(
-                currentStreak, consistencyRate,
-                this.CalculateVolatility(completedLogs));
+            // ── Марків — матриця + стаціонарний розподіл ──────────
+            var (transMatrix, stationaryDist, p01, p10) = this.CalcMarkov(series);
 
-            // Теорія ігор — мінімакс
-            var (weekdayRisks, optimalDay, riskyDay) =
-                this.CalculateMinimaxStrategy(completedLogs);
+            double p00 = 1.0 - p01; // виконав вчора  → виконає сьогодні
+            double p11 = 1.0 - p10; // пропустив вчора → пропустить сьогодні
 
-            // Статистика по днях тижня
-            var weekdayStats = this.CalculateWeekdayStats(completedLogs, daysSinceStart);
+            //   streak > 0 → серія жива → ризик зламати = p01
+            //   streak = 0 → серія вже зламана → ризик пропустити = p11
+            bool isStreakActive = currentStreak > 0;
+            double tomorrowSkipRisk = isStreakActive ? p01 : p11;
 
-            this.logger.LogInformation(
-                "Аналітика розрахована для звички {HabitId}", habitId);
+            // Скільки % втрачається через один пропуск (динамічно, не захардкожено)
+            // p00 - p10: різниця між "виконав вчора" і "пропустив вчора"
+            double skipImpact = Math.Round(Math.Max(0, p00 - p10) * 100, 0);
+
+            // ── EWMA тренд ─────────────────────────────────────────
+            double ewma = this.CalcEwma(series, alpha: 0.3);
+
+            // ── Гібридний прогноз на 7 днів ────────────────────────
+            var next7 = this.CalcHybridForecast(
+                series, weekdayStats, p01, p10, ewma);
+
+            // ── HSS (градієнтний спуск) ────────────────────────────
+            double volatility = this.CalcVolatility(completedDates);
+            var (hss, alpha, beta, gamma) = this.CalcHss(
+                currentStreak, consistencyRate, volatility);
+
+            // ── Мінімакс ──────────────────────────────────────────
+            var (weekdayRisks, optimalDay, riskyDay) = this.CalcMinimax(series);
+
+            this.logger.LogInformation("Аналітика для {HabitId}", habitId);
 
             return new AnalyticsViewModel
             {
                 HabitName = habit.Name,
                 HabitColor = habit.Color,
-                DaysSinceStart = daysSinceStart,
-                TotalCompleted = completedLogs.Count,
+                DaysSinceStart = n,
+                TotalCompleted = totalCompleted,
                 CurrentStreak = currentStreak,
                 MaxStreak = maxStreak,
                 ConsistencyRate = consistencyRate,
-                DailyLogs = dailyLogs,
+                IsStreakActive = isStreakActive,
+                DailyLogs = this.BuildDailyLogs(series),
                 MnkPoints = mnkPoints,
                 MnkTrendLine = trendLine,
                 MnkA0 = Math.Round(a0, 4),
@@ -97,10 +117,27 @@ namespace HabitFlow.BLL.Services
                 PredictedDaysToForm = predictedDays,
                 PredictedFormationDate = formationDate,
                 TransitionMatrix = transMatrix,
+
+                // Перехідні ймовірності Маркова (для UI "паттерни поведінки")
+                // p00: виконала вчора  → виконає сьогодні
+                // p10: пропустила вчора → виконає сьогодні
+                // p01: виконала вчора  → пропустить сьогодні
+                // p11: пропустила вчора → пропустить сьогодні
+                MarkovP00 = Math.Round(p00 * 100, 1),
+                MarkovP10 = Math.Round(p10 * 100, 1),
+                MarkovP01 = Math.Round(p01 * 100, 1),
+                MarkovP11 = Math.Round(p11 * 100, 1),
+
+                // Стаціонарний розподіл (довгостроковий темп)
                 MarkovProbCompleted = Math.Round(stationaryDist[0] * 100, 1),
                 MarkovProbSkipped = Math.Round(stationaryDist[1] * 100, 1),
+
                 Next7DaysProbabilities = next7,
-                BreakRisk = Math.Round(breakRisk * 100, 1),
+
+                // ВИПРАВЛЕНО: правильний ризик залежно від стану серії
+                BreakRisk = Math.Round(tomorrowSkipRisk * 100, 1),
+                SkipImpact = skipImpact, // "один пропуск знижує шанси на X%"
+
                 HabitStrengthScore = Math.Round(hss, 1),
                 AlphaWeight = Math.Round(alpha, 3),
                 BetaWeight = Math.Round(beta, 3),
@@ -109,592 +146,385 @@ namespace HabitFlow.BLL.Services
                 OptimalDayToAct = optimalDay,
                 MostRiskyDay = riskyDay,
                 WeekdayStats = weekdayStats,
+                MainInsight = this.GenInsight(currentStreak, consistencyRate,
+                    tomorrowSkipRisk * 100, totalCompleted, n),
+                ActionTip = this.GenTip(weekdayRisks, tomorrowSkipRisk * 100,
+                    currentStreak, consistencyRate),
             };
         }
 
         // ============================================================
-        // АЛГОРИТМ 1: МНК — Метод Найменших Квадратів
-        // Апроксимуємо накопичений прогрес поліномом 2-го степеня
-        // y(t) = a0 + a1*t + a2*t^2
-        // Система: [A^T * A] * x = A^T * b
+        // ВНУТРІШНІЙ ТИП
         // ============================================================
-        private List<MnkDataPoint> BuildMnkPoints(
-            List<HabitFlow.Domain.Entities.HabitLog> logs,
-            DateTime startDate)
+        private record DayRecord(DateTime Date, bool Completed);
+
+        // ============================================================
+        // СЕРІЯ
+        // ============================================================
+        private int CalcCurrentStreak(List<DayRecord> series)
         {
-            var points = new List<MnkDataPoint>();
-            int cumulative = 0;
-
-            var grouped = logs
-                .GroupBy(l => (l.ScheduledDate.Date - startDate.Date).Days)
-                .OrderBy(g => g.Key);
-
-            foreach (var group in grouped)
-            {
-                cumulative += group.Count();
-                points.Add(new MnkDataPoint
-                {
-                    Day = group.Key,
-                    Value = cumulative,
-                });
-            }
-
-            return points;
-        }
-
-        private (double a0, double a1, double a2,
-                 List<MnkDataPoint> trendLine)
-            CalculateMnk(List<MnkDataPoint> points, int totalDays)
-        {
-            if (points.Count < 3)
-            {
-                return (0, 0.5, 0, new List<MnkDataPoint>());
-            }
-
-            int n = points.Count;
-
-            // Будуємо матрицю A розміром n x 3 (поліном 2-го ступеня)
-            double[,] a = new double[n, 3];
-            double[] b = new double[n];
-
-            for (int i = 0; i < n; i++)
-            {
-                double t = points[i].Day;
-                a[i, 0] = 1;
-                a[i, 1] = t;
-                a[i, 2] = t * t;
-                b[i] = points[i].Value;
-            }
-
-            // A^T * A — матриця 3x3
-            double[,] ata = new double[3, 3];
-            for (int i = 0; i < 3; i++)
-            {
-                for (int j = 0; j < 3; j++)
-                {
-                    for (int k = 0; k < n; k++)
-                    {
-                        ata[i, j] += a[k, i] * a[k, j];
-                    }
-                }
-            }
-
-            // A^T * b — вектор 3
-            double[] atb = new double[3];
-            for (int i = 0; i < 3; i++)
-            {
-                for (int k = 0; k < n; k++)
-                {
-                    atb[i] += a[k, i] * b[k];
-                }
-            }
-
-            // Розв'язуємо методом Гаусса
-            var coefficients = this.GaussianElimination(ata, atb);
-            double a0 = coefficients[0];
-            double a1 = coefficients[1];
-            double a2 = coefficients[2];
-
-            // Будуємо лінію тренду
-            var trendLine = new List<MnkDataPoint>();
-            int forecastDays = totalDays + 30;
-            for (int t = 0; t <= forecastDays; t += 2)
-            {
-                var val = a0 + a1 * t + a2 * t * t;
-                trendLine.Add(new MnkDataPoint { Day = t, Value = Math.Max(0, val) });
-            }
-
-            return (a0, a1, a2, trendLine);
-        }
-
-        private double[] GaussianElimination(double[,] matrix, double[] vector)
-        {
-            int n = vector.Length;
-            double[,] m = (double[,])matrix.Clone();
-            double[] v = (double[])vector.Clone();
-
-            // Пряма хід
-            for (int col = 0; col < n; col++)
-            {
-                int maxRow = col;
-                for (int row = col + 1; row < n; row++)
-                {
-                    if (Math.Abs(m[row, col]) > Math.Abs(m[maxRow, col]))
-                    {
-                        maxRow = row;
-                    }
-                }
-
-                for (int k = col; k < n; k++)
-                {
-                    (m[col, k], m[maxRow, k]) = (m[maxRow, k], m[col, k]);
-                }
-
-                (v[col], v[maxRow]) = (v[maxRow], v[col]);
-
-                for (int row = col + 1; row < n; row++)
-                {
-                    if (Math.Abs(m[col, col]) < 1e-10)
-                    {
-                        continue;
-                    }
-
-                    double factor = m[row, col] / m[col, col];
-                    for (int k = col; k < n; k++)
-                    {
-                        m[row, k] -= factor * m[col, k];
-                    }
-
-                    v[row] -= factor * v[col];
-                }
-            }
-
-            // Зворотня хід
-            double[] result = new double[n];
-            for (int i = n - 1; i >= 0; i--)
-            {
-                result[i] = v[i];
-                for (int j = i + 1; j < n; j++)
-                {
-                    result[i] -= m[i, j] * result[j];
-                }
-
-                if (Math.Abs(m[i, i]) > 1e-10)
-                {
-                    result[i] /= m[i, i];
-                }
-            }
-
-            return result;
-        }
-
-        private (int days, DateTime date) PredictFormation(
-            double a0, double a1, double a2, int currentDay)
-        {
-            // Звичка сформована коли HSS >= 80 або виконань >= 66
-            const double targetCompletions = 66;
-
-            if (a1 <= 0 && a2 <= 0)
-            {
-                return (0, DateTime.UtcNow.Date);
-            }
-
-            // Шукаємо день коли y(t) = 66
-            for (int t = currentDay; t <= 365; t++)
-            {
-                var predicted = a0 + a1 * t + a2 * t * t;
-                if (predicted >= targetCompletions)
-                {
-                    var daysLeft = t - currentDay;
-                    return (daysLeft, DateTime.UtcNow.Date.AddDays(daysLeft));
-                }
-            }
-
-            return (999, DateTime.UtcNow.Date.AddDays(999));
-        }
-
-        // ============================================================
-        // АЛГОРИТМ 2: ЛАНЦЮГИ МАРКОВА
-        // Стани: 0 = Виконано, 1 = Пропущено
-        // Матриця переходів P[i,j] = P(перейти з стану i в стан j)
-        // Стаціонарний розподіл: π = π * P
-        // ============================================================
-        private (double[][] matrix, double[] stationary,
-                 List<double> next7, double breakRisk)
-            CalculateMarkovChains(
-                List<HabitFlow.Domain.Entities.HabitLog> completedLogs,
-                int totalDays)
-        {
-            // Будуємо послідовність станів
-            var sequence = new List<int>();
-            var startDate = completedLogs.Any()
-                ? completedLogs.First().ScheduledDate.Date
-                : DateTime.UtcNow.Date.AddDays(-totalDays);
-
-            var completedDates = completedLogs
-                .Select(l => l.ScheduledDate.Date)
-                .ToHashSet();
-
-            for (int i = 0; i < totalDays; i++)
-            {
-                var date = startDate.AddDays(i);
-                sequence.Add(completedDates.Contains(date) ? 0 : 1);
-            }
-
-            // Рахуємо переходи
-            double[] transitions = new double[] { 0, 0, 0, 0 }; // [00, 01, 10, 11]
-
-            for (int i = 0; i < sequence.Count - 1; i++)
-            {
-                int from = sequence[i];
-                int to = sequence[i + 1];
-                transitions[from * 2 + to]++;
-            }
-
-            // Будуємо матрицю переходів
-            double row0Total = transitions[0] + transitions[1];
-            double row1Total = transitions[2] + transitions[3];
-
-            var matrix = new double[][]
-            {
-                new double[]
-                {
-                    row0Total > 0 ? transitions[0] / row0Total : 0.7,
-                    row0Total > 0 ? transitions[1] / row0Total : 0.3,
-                },
-                new double[]
-                {
-                    row1Total > 0 ? transitions[2] / row1Total : 0.4,
-                    row1Total > 0 ? transitions[3] / row1Total : 0.6,
-                },
-            };
-
-            // Стаціонарний розподіл: π[0] = p10 / (p01 + p10)
-            double p01 = matrix[0][1];
-            double p10 = matrix[1][0];
-            double denom = p01 + p10;
-
-            double[] stationary = denom > 0
-                ? new double[] { p10 / denom, p01 / denom }
-                : new double[] { 0.5, 0.5 };
-
-            // Прогноз на наступні 7 днів
-            // Визначаємо поточний стан
-            double[] currentDist = sequence.Any() && sequence.Last() == 0
-                ? new double[] { 1.0, 0.0 }
-                : new double[] { 0.0, 1.0 };
-
-            var next7 = new List<double>();
-            var dist = currentDist;
-
-            for (int day = 1; day <= 7; day++)
-            {
-                double[] nextDist = new double[]
-                {
-                    dist[0] * matrix[0][0] + dist[1] * matrix[1][0],
-                    dist[0] * matrix[0][1] + dist[1] * matrix[1][1],
-                };
-                next7.Add(Math.Round(nextDist[0] * 100, 1));
-                dist = nextDist;
-            }
-
-            // Ризик зламу серії = ймовірність переходу з виконано в пропущено
-            double breakRisk = p01;
-
-            return (matrix, stationary, next7, breakRisk);
-        }
-
-        // ============================================================
-        // АЛГОРИТМ 3: ГРАДІЄНТНИЙ СПУСК
-        // Підбираємо оптимальні ваги для HSS:
-        // HSS = α*streak + β*consistency + γ*(1-volatility)
-        // Мінімізуємо: L(α,β,γ) = (HSS - target)^2
-        // ∂L/∂α = 2*(HSS-target)*streak
-        // ============================================================
-        private (double hss, double alpha, double beta, double gamma)
-            CalculateHssWithGradient(
-                int streak, double consistency, double volatility)
-        {
-            // Нормалізуємо вхідні дані до [0, 1]
-            double normStreak = Math.Min(streak / 66.0, 1.0);
-            double normConsistency = consistency / 100.0;
-            double normStability = Math.Max(0, 1 - volatility / 7.0);
-
-            // Початкові ваги (рівні)
-            double alpha = 0.333;
-            double beta = 0.333;
-            double gamma = 0.333;
-
-            // Цільове значення HSS (ідеальний прогрес)
-            double target = 0.75;
-            double learningRate = 0.01;
-            int iterations = 1000;
-
-            for (int i = 0; i < iterations; i++)
-            {
-                double hss = alpha * normStreak
-                           + beta * normConsistency
-                           + gamma * normStability;
-
-                double error = hss - target;
-                double loss = error * error;
-
-                if (loss < 0.0001)
-                {
-                    break;
-                }
-
-                // Градієнти
-                double dAlpha = 2 * error * normStreak;
-                double dBeta = 2 * error * normConsistency;
-                double dGamma = 2 * error * normStability;
-
-                // Оновлення ваг
-                alpha -= learningRate * dAlpha;
-                beta -= learningRate * dBeta;
-                gamma -= learningRate * dGamma;
-
-                // Проекція на симплекс: α + β + γ = 1, кожна >= 0.1
-                alpha = Math.Max(0.1, alpha);
-                beta = Math.Max(0.1, beta);
-                gamma = Math.Max(0.1, gamma);
-
-                double sum = alpha + beta + gamma;
-                alpha /= sum;
-                beta /= sum;
-                gamma /= sum;
-            }
-
-            double finalHss = (alpha * normStreak
-                             + beta * normConsistency
-                             + gamma * normStability) * 100;
-
-            return (finalHss, alpha, beta, gamma);
-        }
-
-        // ============================================================
-        // АЛГОРИТМ 4: ТЕОРІЯ ІГОР — МІНІМАКС
-        // Гравець: користувач (вибирає день виконання)
-        // Противник: "обставини" (вихідні, стрес, зайнятість)
-        // Матриця виплат: U(день, ризик)
-        // maximin стратегія: вибрати день з максимальним мінімумом
-        // ============================================================
-        private (List<WeekdayRisk> risks, string optimalDay, string riskyDay)
-            CalculateMinimaxStrategy(
-                List<HabitFlow.Domain.Entities.HabitLog> completedLogs)
-        {
-            var dayNames = new[]
-            {
-                "Понеділок", "Вівторок", "Середа",
-                "Четвер", "П'ятниця", "Субота", "Неділя",
-            };
-
-            var risks = new List<WeekdayRisk>();
-
-            for (int d = 0; d < 7; d++)
-            {
-                var dow = (DayOfWeek)((d + 1) % 7);
-                var dayLogs = completedLogs
-                    .Where(l => l.ScheduledDate.DayOfWeek == dow)
-                    .ToList();
-
-                // "Природній ризик" середовища для кожного дня
-                // (вихідні мають вищий базовий ризик)
-                double baseRisk = dow is DayOfWeek.Saturday or DayOfWeek.Sunday
-                    ? 0.4
-                    : dow is DayOfWeek.Monday or DayOfWeek.Friday
-                        ? 0.25
-                        : 0.15;
-
-                double completionRate = dayLogs.Any()
-                    ? dayLogs.Count(l => l.Status == LogStatus.Completed)
-                      / (double)dayLogs.Count
-                    : 0.5;
-
-                // Матриця виплат: U(день, ризик) = completionRate - baseRisk
-                double utilityMin = completionRate - 1.0;      // найгірший сценарій
-                double utilityMax = completionRate - baseRisk;  // найкращий сценарій
-                double minimaxValue = (utilityMin + utilityMax) / 2.0;
-
-                // Ризик = 1 - мінімакс значення нормалізоване
-                double riskScore = Math.Max(0, Math.Min(1, 1 - (minimaxValue + 1) / 2));
-
-                string riskLevel = riskScore switch
-                {
-                    < 0.3 => "Низький",
-                    < 0.6 => "Середній",
-                    _ => "Високий",
-                };
-
-                risks.Add(new WeekdayRisk
-                {
-                    DayName = dayNames[d],
-                    CompletionRate = Math.Round(completionRate * 100, 1),
-                    RiskScore = Math.Round(riskScore * 100, 1),
-                    RiskLevel = riskLevel,
-                });
-            }
-
-            // Мінімакс: оптимальна стратегія — день з найнижчим ризиком
-            var optimal = risks.OrderBy(r => r.RiskScore).First();
-            var risky = risks.OrderByDescending(r => r.RiskScore).First();
-
-            return (risks, optimal.DayName, risky.DayName);
-        }
-
-        // ============================================================
-        // ДОПОМІЖНІ АЛГОРИТМИ
-        // ============================================================
-
-
-        private int CalculateCurrentStreak(
-    List<HabitFlow.Domain.Entities.HabitLog> logs)
-        {
-            if (!logs.Any())
-            {
-                return 0;
-            }
-
-            var dates = logs
-                .Select(l => l.ScheduledDate.Date)
-                .Distinct()
-                .OrderByDescending(d => d)
-                .ToList();
-
-            bool doneToday = dates.Contains(DateTime.Today);
-            bool doneYesterday = dates.Contains(DateTime.Today.AddDays(-1));
-
-            DateTime startDate;
-
-            if (doneToday)
-            {
-                startDate = DateTime.Today;
-            }
-            else if (doneYesterday)
-            {
-                startDate = DateTime.Today.AddDays(-1);
-            }
+            if (!series.Any()) return 0;
+
+            bool todayDone = series[^1].Completed;
+            bool yesterdayDone = series.Count > 1 && series[^2].Completed;
+
+            int startIdx;
+            if (todayDone)
+                startIdx = series.Count - 1;
+            else if (yesterdayDone)
+                startIdx = series.Count - 2;
             else
-            {
                 return 0;
-            }
 
             int streak = 0;
-            var current = startDate;
-
-            foreach (var date in dates)
+            for (int i = startIdx; i >= 0; i--)
             {
-                if (date == current)
-                {
-                    streak++;
-                    current = current.AddDays(-1);
-                }
-                else if (date < current)
-                {
-                    break;
-                }
+                if (series[i].Completed) streak++;
+                else break;
             }
-
             return streak;
         }
 
-        private int CalculateMaxStreak(
-    List<HabitFlow.Domain.Entities.HabitLog> logs)
+        private int CalcMaxStreak(List<DayRecord> series)
         {
-            if (!logs.Any())
+            int max = 0, cur = 0;
+            foreach (var d in series)
             {
-                return 0;
+                cur = d.Completed ? cur + 1 : 0;
+                if (cur > max) max = cur;
             }
-
-            var dates = logs
-                .Select(l => l.ScheduledDate.Date)
-                .Distinct()
-                .OrderBy(d => d)
-                .ToList();
-
-            int max = 1;
-            int current = 1;
-
-            for (int i = 1; i < dates.Count; i++)
-            {
-                var diff = (dates[i] - dates[i - 1]).Days;
-
-                if (diff == 1)
-                {
-                    current++;
-                    max = Math.Max(max, current);
-                }
-                else
-                {
-                    current = 1;
-                }
-            }
-
             return max;
         }
 
-        private double CalculateVolatility(
-            List<HabitFlow.Domain.Entities.HabitLog> logs)
+        // ============================================================
+        // WEEKDAY STATS
+        // ============================================================
+        private List<WeekdayStats> CalcWeekdayStats(List<DayRecord> series)
         {
-            if (logs.Count < 2)
+            var names = new[] { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд" };
+            return Enumerable.Range(0, 7).Select(d =>
             {
-                return 0;
-            }
-
-            var intervals = new List<double>();
-            for (int i = 1; i < logs.Count; i++)
-            {
-                intervals.Add(
-                    (logs[i].ScheduledDate - logs[i - 1].ScheduledDate).TotalDays);
-            }
-
-            double mean = intervals.Average();
-            double variance = intervals.Sum(x => Math.Pow(x - mean, 2)) / intervals.Count;
-            return Math.Round(Math.Sqrt(variance), 3);
+                var dow = (DayOfWeek)((d + 1) % 7);
+                var recs = series.Where(r => r.Date.DayOfWeek == dow).ToList();
+                int exp = Math.Max(1, recs.Count);
+                int done = recs.Count(r => r.Completed);
+                return new WeekdayStats
+                {
+                    Day = names[d],
+                    Total = exp,
+                    Completed = done,
+                    Rate = Math.Min(100.0, Math.Round(done * 100.0 / exp, 1)),
+                };
+            }).ToList();
         }
 
-        private List<DailyLogPoint> BuildDailyLogs(
-            List<HabitFlow.Domain.Entities.HabitLog> completedLogs,
-            DateTime startDate,
-            DateTime today)
+        // ============================================================
+        // МНК
+        // ============================================================
+        private List<MnkDataPoint> BuildMnkPoints(
+            List<DateTime> dates, DateTime start)
         {
-            var result = new List<DailyLogPoint>();
-            var completedDates = completedLogs
-                .Select(l => l.ScheduledDate.Date)
-                .ToHashSet();
-
-            int streak = 0;
-            var days = Math.Min((today - startDate).Days + 1, 90);
-
-            for (int i = 0; i < days; i++)
-            {
-                var date = startDate.AddDays(i);
-                bool completed = completedDates.Contains(date);
-
-                if (completed)
+            int cum = 0;
+            return dates
+                .GroupBy(d => (d - start).Days)
+                .OrderBy(g => g.Key)
+                .Select(g =>
                 {
-                    streak++;
-                }
-                else
-                {
-                    streak = 0;
-                }
-
-                result.Add(new DailyLogPoint
-                {
-                    Date = date,
-                    Completed = completed,
-                    CumulativeStreak = streak,
-                });
-            }
-
-            return result;
+                    cum += g.Count();
+                    return new MnkDataPoint { Day = g.Key, Value = cum };
+                })
+                .ToList();
         }
 
-        private List<WeekdayStats> CalculateWeekdayStats(
-            List<HabitFlow.Domain.Entities.HabitLog> completedLogs,
-            int totalDays)
+        private (double a0, double a1, double a2, List<MnkDataPoint> trend)
+            CalculateMnk(List<MnkDataPoint> pts, int totalDays)
         {
+            if (pts.Count < 3) return (0, 0.5, 0, new List<MnkDataPoint>());
+            int n = pts.Count;
+            double[,] A = new double[n, 3];
+            double[] b = new double[n];
+            for (int i = 0; i < n; i++)
+            {
+                double t = pts[i].Day;
+                A[i, 0] = 1; A[i, 1] = t; A[i, 2] = t * t;
+                b[i] = pts[i].Value;
+            }
+            double[,] AtA = new double[3, 3];
+            double[] Atb = new double[3];
+            for (int i = 0; i < 3; i++)
+                for (int j = 0; j < 3; j++)
+                    for (int k = 0; k < n; k++)
+                        AtA[i, j] += A[k, i] * A[k, j];
+            for (int i = 0; i < 3; i++)
+                for (int k = 0; k < n; k++)
+                    Atb[i] += A[k, i] * b[k];
+
+            var c = this.GaussElim(AtA, Atb);
+            double a0 = c[0], a1 = c[1], a2 = c[2];
+
+            var trend = new List<MnkDataPoint>();
+            for (int t = 0; t <= totalDays + 30; t += 2)
+                trend.Add(new MnkDataPoint
+                { Day = t, Value = Math.Max(0, a0 + a1 * t + a2 * t * t) });
+
+            return (a0, a1, a2, trend);
+        }
+
+        private double[] GaussElim(double[,] M, double[] v)
+        {
+            int n = v.Length;
+            double[,] m = (double[,])M.Clone();
+            double[] r = (double[])v.Clone();
+            for (int col = 0; col < n; col++)
+            {
+                int mx = col;
+                for (int row = col + 1; row < n; row++)
+                    if (Math.Abs(m[row, col]) > Math.Abs(m[mx, col])) mx = row;
+                for (int k = col; k < n; k++) (m[col, k], m[mx, k]) = (m[mx, k], m[col, k]);
+                (r[col], r[mx]) = (r[mx], r[col]);
+                for (int row = col + 1; row < n; row++)
+                {
+                    if (Math.Abs(m[col, col]) < 1e-10) continue;
+                    double f = m[row, col] / m[col, col];
+                    for (int k = col; k < n; k++) m[row, k] -= f * m[col, k];
+                    r[row] -= f * r[col];
+                }
+            }
+            double[] res = new double[n];
+            for (int i = n - 1; i >= 0; i--)
+            {
+                res[i] = r[i];
+                for (int j = i + 1; j < n; j++) res[i] -= m[i, j] * res[j];
+                if (Math.Abs(m[i, i]) > 1e-10) res[i] /= m[i, i];
+            }
+            return res;
+        }
+
+        private (int days, DateTime date) PredictFormation(
+            double a0, double a1, double a2, int cur)
+        {
+            if (a1 <= 0 && a2 <= 0) return (0, DateTime.Today);
+            for (int t = cur; t <= 730; t++)
+                if (a0 + a1 * t + a2 * t * t >= 66)
+                    return (t - cur, DateTime.Today.AddDays(t - cur));
+            return (999, DateTime.Today.AddDays(999));
+        }
+
+        // ============================================================
+        // МАРКІВ — матриця + стаціонарний розподіл
+        // ============================================================
+        private (double[][] matrix, double[] stat, double p01, double p10)
+            CalcMarkov(List<DayRecord> series)
+        {
+            double t00 = 0, t01 = 0, t10 = 0, t11 = 0;
+            for (int i = 0; i < series.Count - 1; i++)
+            {
+                bool f = series[i].Completed, s = series[i + 1].Completed;
+                if (f && s) t00++;
+                else if (f && !s) t01++;
+                else if (!f && s) t10++;
+                else t11++;
+            }
+            double r0 = t00 + t01, r1 = t10 + t11;
+            var mx = new double[][]
+            {
+                new[]{ r0>0 ? t00/r0 : 0.7, r0>0 ? t01/r0 : 0.3 },
+                new[]{ r1>0 ? t10/r1 : 0.4, r1>0 ? t11/r1 : 0.6 },
+            };
+            double p01v = mx[0][1], p10v = mx[1][0];
+            double den = p01v + p10v;
+            double[] stat = den > 0
+                ? new[] { p10v / den, p01v / den }
+                : new[] { 0.6, 0.4 };
+            return (mx, stat, p01v, p10v);
+        }
+
+        // ============================================================
+        // EWMA
+        // ============================================================
+        private double CalcEwma(List<DayRecord> series, double alpha)
+        {
+            if (!series.Any()) return 0.5;
+            double ewma = series[0].Completed ? 1.0 : 0.0;
+            for (int i = 1; i < series.Count; i++)
+                ewma = alpha * (series[i].Completed ? 1.0 : 0.0) + (1 - alpha) * ewma;
+            return ewma;
+        }
+
+        // ============================================================
+        // ПРОГНОЗ НА 7 ДНІВ
+        // ============================================================
+        private List<double> CalcHybridForecast(
+            List<DayRecord> series,
+            List<WeekdayStats> weekdayStats,
+            double p01, double p10,
+            double ewma)
+        {
+            if (series.Count < 7)
+                return Enumerable.Repeat(Math.Round(ewma * 100, 1), 7).ToList();
+
+            double p00 = 1 - p01;
+
+            // Початкова ймовірність: середнє по останніх 3 днях
+            int window = Math.Min(3, series.Count);
+            double prevProb = series.TakeLast(window).Count(r => r.Completed)
+                              / (double)window;
+
+            // WeekdayRate → словник DayOfWeek
+            var dowRates = new Dictionary<DayOfWeek, double>();
             var dayNames = new[] { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд" };
-            var result = new List<WeekdayStats>();
-
             for (int d = 0; d < 7; d++)
             {
                 var dow = (DayOfWeek)((d + 1) % 7);
-                var dayCount = completedLogs.Count(l =>
-                    l.ScheduledDate.DayOfWeek == dow);
-                var expectedDays = Math.Max(1, totalDays / 7);
-
-                result.Add(new WeekdayStats
-                {
-                    Day = dayNames[d],
-                    Total = expectedDays,
-                    Completed = dayCount,
-                    Rate = Math.Round((double)dayCount / expectedDays * 100, 1),
-                });
+                var stat = weekdayStats.FirstOrDefault(s => s.Day == dayNames[d]);
+                dowRates[dow] = stat != null ? stat.Rate / 100.0 : ewma;
             }
 
-            return result;
+            var forecast = new List<double>();
+            for (int step = 0; step < 7; step++)
+            {
+                var nextDate = DateTime.Today.AddDays(step + 1);
+                var dow = nextDate.DayOfWeek;
+
+                double mkP = prevProb * p00 + (1 - prevProb) * p10;
+                double wdP = dowRates.TryGetValue(dow, out var r) ? r : ewma;
+
+                double hybrid = 0.40 * mkP + 0.40 * wdP + 0.20 * ewma;
+                hybrid = Math.Max(0.05, Math.Min(0.95, hybrid));
+
+                forecast.Add(Math.Round(hybrid * 100, 1));
+                prevProb = hybrid;
+            }
+
+            return forecast;
+        }
+
+        // ============================================================
+        // HSS — градієнтний спуск
+        // ============================================================
+        private double CalcVolatility(List<DateTime> dates)
+        {
+            if (dates.Count < 2) return 0;
+            var gaps = dates.Zip(dates.Skip(1), (a, b) => (b - a).TotalDays).ToList();
+            double mean = gaps.Average();
+            return Math.Round(
+                Math.Sqrt(gaps.Sum(x => Math.Pow(x - mean, 2)) / gaps.Count), 3);
+        }
+
+        private (double hss, double alpha, double beta, double gamma)
+            CalcHss(int streak, double consistency, double volatility)
+        {
+            double ns = Math.Min(streak / 66.0, 1.0);
+            double nc = consistency / 100.0;
+            double nv = Math.Max(0, 1 - volatility / 7.0);
+            double a = 0.333, b = 0.333, g = 0.333;
+            for (int i = 0; i < 1000; i++)
+            {
+                double h = a * ns + b * nc + g * nv;
+                double e = h - 0.75;
+                if (e * e < 0.0001) break;
+                a -= 0.01 * 2 * e * ns;
+                b -= 0.01 * 2 * e * nc;
+                g -= 0.01 * 2 * e * nv;
+                a = Math.Max(0.1, a);
+                b = Math.Max(0.1, b);
+                g = Math.Max(0.1, g);
+                double s = a + b + g; a /= s; b /= s; g /= s;
+            }
+            return ((a * ns + b * nc + g * nv) * 100, a, b, g);
+        }
+
+        // ============================================================
+        // МІНІМАКС
+        // ============================================================
+        private (List<WeekdayRisk> risks, string optimal, string risky)
+            CalcMinimax(List<DayRecord> series)
+        {
+            var names = new[]
+            {
+                "Понеділок","Вівторок","Середа",
+                "Четвер","П'ятниця","Субота","Неділя",
+            };
+            var risks = Enumerable.Range(0, 7).Select(d =>
+            {
+                var dow = (DayOfWeek)((d + 1) % 7);
+                var recs = series.Where(r => r.Date.DayOfWeek == dow).ToList();
+                int exp = Math.Max(1, recs.Count);
+                int done = recs.Count(r => r.Completed);
+                double cr = (double)done / exp;
+                double fail = 1.0 - cr;
+                double baseR = dow is DayOfWeek.Saturday or DayOfWeek.Sunday ? 0.35
+                    : dow is DayOfWeek.Monday or DayOfWeek.Friday ? 0.20
+                    : 0.10;
+                double risk = Math.Min(1.0, 0.70 * fail + 0.30 * baseR);
+                return new WeekdayRisk
+                {
+                    DayName = names[d],
+                    CompletionRate = Math.Round(cr * 100, 1),
+                    RiskScore = Math.Round(risk * 100, 1),
+                    RiskLevel = risk < 0.25 ? "Низький"
+                                   : risk < 0.50 ? "Середній" : "Високий",
+                };
+            }).ToList();
+
+            return (risks,
+                risks.OrderBy(r => r.RiskScore).First().DayName,
+                risks.OrderByDescending(r => r.RiskScore).First().DayName);
+        }
+
+        // ============================================================
+        // BUILD HELPERS
+        // ============================================================
+        private List<DailyLogPoint> BuildDailyLogs(List<DayRecord> series)
+        {
+            int streak = 0;
+            return series.Select(r =>
+            {
+                streak = r.Completed ? streak + 1 : 0;
+                return new DailyLogPoint
+                {
+                    Date = r.Date,
+                    Completed = r.Completed,
+                    CumulativeStreak = streak,
+                };
+            }).ToList();
+        }
+
+        // ============================================================
+        //ВИСНОВКИ
+        // ============================================================
+        private string GenInsight(int streak, double consistency,
+            double tomorrowSkipRiskPct, int total, int days)
+        {
+            if (consistency >= 80 && streak >= 5)
+                return $"Ти на підйомі! {streak} днів поспіль і {consistency}% — звичка майже автоматична.";
+            if (streak >= 14)
+                return $"Неймовірно — {streak} днів поспіль! Мозок вже формує автоматизм.";
+            if (streak >= 7)
+                return $"Тиждень без перерви — реальне досягнення. Ще трохи і стане легше.";
+            if (tomorrowSkipRiskPct > 50)
+                return "Є ризик зупинитись. Сьогодні важливо виконати хоча б мінімум.";
+            if (consistency < 30)
+                return "Поки важко — але ти продовжуєш. Кожен день рахується.";
+            if (total >= 21)
+                return $"Ти вже виконала цю звичку {total} разів — мозок запам'ятовує паттерн.";
+            return $"Стабільний прогрес за {days} днів. Продовжуй у тому ж темпі.";
+        }
+
+        private string GenTip(List<WeekdayRisk> risks, double tomorrowSkipRiskPct,
+            int streak, double consistency)
+        {
+            if (!risks.Any())
+                return "Додай перші виконання щоб отримати поради.";
+            var worst = risks.OrderByDescending(r => r.RiskScore).First();
+            var best = risks.OrderBy(r => r.RiskScore).First();
+            if (tomorrowSkipRiskPct > 50)
+                return "Постав нагадування прямо зараз. Після пропуску повернутись вдвічі важче.";
+            if (streak >= 3)
+                return $"Твій слабкий день — {worst.DayName} ({worst.CompletionRate}% виконань). " +
+                       $"Заплануй щось просте заздалегідь.";
+            return $"Найлегше тобі дається {best.DayName} ({best.CompletionRate}%). " +
+                   $"У {worst.DayName} постав нагадування на ранок.";
         }
     }
 }
