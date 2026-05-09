@@ -11,6 +11,9 @@
         public int MaxStreak { get; set; }
         public double ConsistencyRate { get; set; }
 
+        public string MainInsight { get; set; } = string.Empty;
+        public string ActionTip { get; set; } = string.Empty;
+
         // МНК — апроксимація
         public List<MnkDataPoint> MnkPoints { get; set; } = new();
         public List<MnkDataPoint> MnkTrendLine { get; set; } = new();
@@ -19,6 +22,19 @@
         public double MnkA2 { get; set; }
         public int PredictedDaysToForm { get; set; }
         public DateTime PredictedFormationDate { get; set; }
+  
+        // Чи жива серія зараз (streak > 0)
+        // Визначає який ризик показувати у картці "Ймовірність пропустити завтра"
+        public bool IsStreakActive { get; set; }
+
+        // Перехідні ймовірності Маркова (всі 4 для UI)
+        public double MarkovP00 { get; set; } // виконала вчора  → виконає сьогодні
+        public double MarkovP10 { get; set; } // пропустила вчора → виконає сьогодні
+        public double MarkovP01 { get; set; } // виконала вчора  → пропустить сьогодні
+        public double MarkovP11 { get; set; } // пропустила вчора → пропустить сьогодні
+
+        // "Один пропуск знижує шанси на X%" — динамічно (p00 - p10)
+        public double SkipImpact { get; set; }
 
         // Марківські ланцюги
         public double MarkovProbCompleted { get; set; }
