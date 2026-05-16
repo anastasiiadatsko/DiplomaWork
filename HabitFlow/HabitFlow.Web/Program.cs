@@ -29,6 +29,14 @@ builder.Services.AddScoped<IHabitService, HabitService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 
+builder.Services.AddHttpClient<HabitFlow.BLL.Services.CoachService>();
+
+builder.Services.AddScoped<HabitFlow.BLL.Interfaces.ICoachService,
+                            HabitFlow.BLL.Services.CoachService>();
+
+
+builder.Configuration.AddUserSecrets<Program>();
+
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromHours(8);
@@ -50,7 +58,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 app.UseSession();
-app.UseAuthorization();
 
 app.MapControllerRoute(
     name: "default",

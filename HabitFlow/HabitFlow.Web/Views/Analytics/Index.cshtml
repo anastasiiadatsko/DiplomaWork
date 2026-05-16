@@ -44,19 +44,14 @@
     bool isFormed = Model.PredictedDaysToForm == 0;
     bool isUnknown = Model.PredictedDaysToForm >= 200;
 
-    // ── Марків — всі 4 переходи ───────────────────────────────────────
     bool hasMatrix = Model.TransitionMatrix != null && Model.TransitionMatrix.Length > 1;
     double p00 = hasMatrix ? Math.Round(Model.TransitionMatrix[0][0] * 100) : 0;
     double p01 = hasMatrix ? Math.Round(Model.TransitionMatrix[0][1] * 100) : 0;
     double p10 = hasMatrix ? Math.Round(Model.TransitionMatrix[1][0] * 100) : 0;
     double p11 = hasMatrix ? Math.Round(Model.TransitionMatrix[1][1] * 100) : 0;
 
-    // ── Пояснення Маркова ─────────────────────────────────────────────
-    // Якщо пропустила→виконала > виконала→виконала — є проблема в даних
-    // (замало переходів). Відображаємо пояснення.
     bool markovDataReliable = hasMatrix && Model.DaysSinceStart >= 14;
 
-    // Різниця між станами — скільки дає "гарний" день
     double skipImpactVal = Model.SkipImpact > 0 ? Model.SkipImpact : Math.Max(0, p00 - p10);
 }
 
@@ -616,6 +611,43 @@
             </div>
         }
 
+        @if (!string.IsNullOrEmpty(Model.MainInsight))
+        {
+            <div class="insight-banner">
+                <div class="insight-banner-title">💡 Що відбувається з твоєю звичкою</div>
+                <div class="insight-banner-text">@Model.MainInsight</div>
+
+                @if (!string.IsNullOrEmpty(Model.ActionTip))
+                {
+                    <div class="insight-banner-tip">👉 @Model.ActionTip</div>
+                }
+            </div>
+        }
+
+        <<a href="/Coach/Session/@habitId"
+           style="display:flex; align-items:center; gap:10px;
+          background:white; border:1.5px solid #16a34a;
+          border-radius:16px; padding:16px 20px;
+          text-decoration:none; margin-bottom:18px;
+          box-shadow:0 2px 10px rgba(0,0,0,.04);
+          color:#111827;">
+            <span style="font-size:32px">🤖</span>
+
+            <div>
+                <div style="font-weight:700; font-size:15px;">
+                    Поговори з AI-коучем
+                </div>
+
+                <div style="font-size:13px; color:#6b7280;">
+                    Персональні поради на основі твоєї аналітики
+                </div>
+            </div>
+
+            <span style="margin-left:auto; color:#16a34a; font-size:20px;">
+                →
+            </span>
+        </a>
+
         <!-- Міцність звички (HSS) -->
         <div class="hss-card">
             <div class="hss-circle">
@@ -842,7 +874,6 @@
 
         </div>
 
-        <!-- Детальна математика -->
         <div class="math-section">
             <button class="toggle-math" onclick="toggleMath()">
                 <span id="toggleArrow">▶</span>
@@ -886,7 +917,6 @@
 
     </div>
 
-    <!-- Chart.js перенесено в кінець body щоб гарантовано завантажився -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script>
         // ── Дані з сервера ─────────────────────────────────────────────────
@@ -966,7 +996,6 @@
             }
         }
 
-        // ── Прогноз 7 днів ─────────────────────────────────────────────────
         const forecastCtx = document.getElementById('forecastChart');
         if (forecastCtx) {
             if (next7.length === 0) {
@@ -974,7 +1003,6 @@
                     '<div style="display:flex;align-items:center;justify-content:center;' +
                     'height:100%;color:#9ca3af;font-size:14px;">Недостатньо даних для прогнозу</div>';
             } else {
-                // Формуємо реальні дати для міток
                 const today = new Date();
                 const dayLabels = Array.from({ length: 7 }, (_, i) => {
                     const d = new Date(today);
@@ -982,7 +1010,6 @@
                     return d.toLocaleDateString('uk-UA', { weekday: 'short', day: 'numeric' });
                 });
 
-                // Кольори: зелений ≥70%, синій ≥50%, рожевий <50%
                 const barColors = next7.map(v =>
                     v >= 70 ? '#86efac' : v >= 50 ? '#93c5fd' : '#fca5a5'
                 );
@@ -1012,7 +1039,6 @@
             }
         }
 
-        // ── Розгортання математики ─────────────────────────────────────────
         function toggleMath() {
             const block = document.getElementById('mathDetails');
             const arrow = document.getElementById('toggleArrow');
