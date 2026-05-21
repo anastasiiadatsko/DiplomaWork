@@ -27,5 +27,11 @@ namespace HabitFlow.BLL.DTOs
         public DateTime StartDate { get; set; }
 
         public bool IsActive { get; set; }
+
+        public bool IsShared { get; set; }
+
+        public bool IsOwner { get; set; }
+
+        public int ParticipantsCount { get; set; }
     }
 }

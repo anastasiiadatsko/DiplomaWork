@@ -21,5 +21,7 @@ namespace HabitFlow.BLL.DTOs
         public string Color { get; set; } = "#16a34a";
 
         public TimeOnly? ReminderTime { get; set; }
+
+        public string? FriendEmail { get; set; }
     }
 }

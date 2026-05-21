@@ -34,6 +34,9 @@ builder.Services.AddHttpClient<HabitFlow.BLL.Services.CoachService>();
 builder.Services.AddScoped<HabitFlow.BLL.Interfaces.ICoachService,
                             HabitFlow.BLL.Services.CoachService>();
 
+builder.Services.AddScoped<ISharedHabitService, SharedHabitService>();
+
+builder.Services.AddScoped<ISharedHabitRepository, SharedHabitRepository>();
 
 builder.Configuration.AddUserSecrets<Program>();
 
