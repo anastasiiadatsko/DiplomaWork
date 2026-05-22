@@ -1,0 +1,152 @@
+﻿@{
+    ViewBag.Title = "Голосовий коуч";
+    var habitId = ViewBag.HabitId;
+}
+
+<div class="voice-coach">
+    <div id="status" class="status-idle">Натисни для розмови</div>
+    <button id="btnTalk" class="btn-voice">🎙️</button>
+    <div id="transcript"></div>
+</div>
+
+@section Scripts {
+    <script>
+        const habitId = '@habitId';
+        let ws, audioCtx, processor, source, isConnected = false;
+        const btn = document.getElementById('btnTalk');
+        const status = document.getElementById('status');
+        const transcript = document.getElementById('transcript');
+
+        // Аудіо вихід — черга чанків PCM від Gemini
+        const audioQueue = [];
+        let isPlaying = false;
+
+        btn.addEventListener('click', () => {
+            if (!isConnected) startSession();
+            else stopSession();
+        });
+
+        async function startSession() {
+            status.textContent = 'Підключення...';
+
+            // Підключитись до нашого проксі
+            const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+            ws = new WebSocket(`${proto}://${location.host}/Coach/VoiceStream/${habitId}`);
+            ws.binaryType = 'arraybuffer';
+
+            ws.onopen = async () => {
+                isConnected = true;
+                btn.textContent = '⏹️';
+                status.textContent = 'Слухаю...';
+                await startMicrophone();
+            };
+
+            ws.onmessage = (event) => {
+                if (typeof event.data === 'string') {
+                    handleTextMessage(event.data);
+                } else {
+                    // Бінарне аудіо — PCM 24kHz від Gemini (не використовується у цьому форматі)
+                }
+            };
+
+            ws.onclose = () => stopSession();
+            ws.onerror = (e) => { status.textContent = 'Помилка з\'єднання'; console.error(e); };
+        }
+
+        function handleTextMessage(json) {
+            try {
+                const msg = JSON.parse(json);
+
+                // Аудіо відповідь
+                const audioParts = msg?.serverContent?.modelTurn?.parts?.filter(p => p.inlineData);
+                if (audioParts?.length) {
+                    audioParts.forEach(p => {
+                        const pcm = base64ToFloat32(p.inlineData.data);
+                        audioQueue.push(pcm);
+                    });
+                    if (!isPlaying) playNextChunk();
+                }
+
+                // Транскрипт
+                const text = msg?.serverContent?.outputAudioTranscription?.text;
+                if (text) {
+                    transcript.innerHTML += `<p class="gemini-msg">🤖 ${text}</p>`;
+                }
+
+                const inputText = msg?.serverContent?.inputAudioTranscription?.text;
+                if (inputText) {
+                    transcript.innerHTML += `<p class="user-msg">👤 ${inputText}</p>`;
+                }
+            } catch (e) {}
+        }
+
+        async function startMicrophone() {
+            audioCtx = new AudioContext({ sampleRate: 16000 });
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            source = audioCtx.createMediaStreamSource(stream);
+
+            await audioCtx.audioWorklet.addModule('/js/pcm-processor.js');
+            processor = new AudioWorkletNode(audioCtx, 'pcm-processor');
+
+            processor.port.onmessage = (e) => {
+                if (ws?.readyState === WebSocket.OPEN) {
+                    // Відправити PCM аудіо в Gemini Live API формат
+                    const payload = JSON.stringify({
+                        realtime_input: {
+                            media_chunks: [{
+                                data: arrayBufferToBase64(e.data),
+                                mime_type: 'audio/pcm;rate=16000'
+                            }]
+                        }
+                    });
+                    ws.send(payload);
+                }
+            };
+
+            source.connect(processor);
+            processor.connect(audioCtx.destination);
+        }
+
+        function stopSession() {
+            isConnected = false;
+            btn.textContent = '🎙️';
+            status.textContent = 'Натисни для розмови';
+            processor?.disconnect();
+            source?.disconnect();
+            audioCtx?.close();
+            ws?.close();
+        }
+
+        // PCM base64 → Float32 → Web Audio
+        function base64ToFloat32(b64) {
+            const binary = atob(b64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            const int16 = new Int16Array(bytes.buffer);
+            const float32 = new Float32Array(int16.length);
+            for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+            return float32;
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            bytes.forEach(b => binary += String.fromCharCode(b));
+            return btoa(binary);
+        }
+
+        function playNextChunk() {
+            if (!audioQueue.length) { isPlaying = false; return; }
+            isPlaying = true;
+            const ctx = new AudioContext({ sampleRate: 24000 }); // Gemini output = 24kHz
+            const samples = audioQueue.shift();
+            const buf = ctx.createBuffer(1, samples.length, 24000);
+            buf.copyToChannel(samples, 0);
+            const bufSource = ctx.createBufferSource();
+            bufSource.buffer = buf;
+            bufSource.connect(ctx.destination);
+            bufSource.onended = playNextChunk;
+            bufSource.start();
+        }
+    </script>
+}

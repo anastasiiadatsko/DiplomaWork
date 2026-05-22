@@ -3,7 +3,6 @@
 @{
     Layout = null;
     var habitId = ViewBag.HabitId;
-    var habitName = ViewBag.HabitName as string ?? string.Empty;
 }
 
 <!DOCTYPE html>
@@ -11,455 +10,1148 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Коуч — @Model.SessionTitle</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <title>Агент — @Model.SessionTitle</title>
+    <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700&family=Nunito:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-        * { margin:0; padding:0; box-sizing:border-box; }
-        body { font-family:Inter,sans-serif; background:#f0fdf4; min-height:100vh; }
-
-        .navbar { background:white; padding:14px 30px; display:flex; justify-content:space-between;
-            align-items:center; box-shadow:0 2px 8px rgba(0,0,0,.05); }
-        .logo { font-size:20px; font-weight:700; color:#16a34a; text-decoration:none; }
-        .nav-link { text-decoration:none; padding:8px 14px; border-radius:10px;
-            color:#374151; background:#f9fafb; font-size:14px; }
-
-        .container { max-width:700px; margin:0 auto; padding:32px 20px 60px; }
-
-        /* ── Header ── */
-        .coach-header { text-align:center; margin-bottom:32px; }
-        .coach-emoji { font-size:52px; display:block; margin-bottom:12px; }
-        .coach-title { font-size:22px; font-weight:700; margin-bottom:6px; }
-        .coach-subtitle { color:#6b7280; font-size:14px; }
-
-        /* ── Кроки анкети ── */
-        .progress-bar { height:4px; background:#e5e7eb; border-radius:4px; margin-bottom:28px; }
-        .progress-fill { height:100%; background:#16a34a; border-radius:4px;
-            transition: width .4s ease; }
-
-        /* ── Питання ── */
-        .question-card { background:white; border-radius:20px; padding:28px;
-            box-shadow:0 4px 20px rgba(0,0,0,.06); margin-bottom:16px;
-            display:none; animation: fadeIn .3s ease; }
-        .question-card.active { display:block; }
-        @@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-
-        .question-number { font-size:12px; color:#9ca3af; text-transform:uppercase;
-            letter-spacing:.5px; margin-bottom:8px; }
-        .question-text { font-size:18px; font-weight:600; margin-bottom:6px; line-height:1.4; }
-        .question-hint { font-size:13px; color:#9ca3af; margin-bottom:18px; }
-
-        textarea, input[type="text"] {
-            width:100%; padding:14px; border:1.5px solid #e5e7eb; border-radius:12px;
-            font-family:Inter,sans-serif; font-size:15px; resize:vertical; min-height:100px;
-            transition: border-color .2s; outline:none; color:#111827;
+        :root {
+            --green: #22c55e;
+            --green-dark: #16a34a;
+            --green-deeper: #166534;
+            --green-bg: #f0fdf4;
+            --green-light: #dcfce7;
+            --card-bg: #ffffff;
+            --text: #111827;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --red: #ef4444;
+            --radius: 20px;
         }
-        textarea:focus, input[type="text"]:focus { border-color:#16a34a; }
-        .skip-hint { font-size:12px; color:#d1d5db; margin-top:6px; }
 
-        /* ── Кнопки навігації ── */
-        .nav-buttons { display:flex; gap:12px; margin-top:20px; }
-        .btn-prev { padding:13px 22px; background:#f9fafb; border:1.5px solid #e5e7eb;
-            border-radius:12px; cursor:pointer; font-size:14px; font-weight:500;
-            color:#374151; }
-        .btn-next { flex:1; padding:13px; background:#16a34a; color:white;
-            border:none; border-radius:12px; cursor:pointer; font-size:15px;
-            font-weight:600; transition: background .2s; }
-        .btn-next:hover { background:#15803d; }
-        .btn-next:disabled { background:#d1fae5; cursor:not-allowed; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-        /* ── Результат (порада) ── */
-        .advice-card { background:white; border-radius:20px; padding:28px;
-            box-shadow:0 4px 20px rgba(0,0,0,.06); display:none; }
-        .advice-card.visible { display:block; animation: fadeIn .4s ease; }
+        body {
+            font-family: 'Nunito', sans-serif;
+            background: var(--green-bg);
+            min-height: 100vh;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+        }
 
-        .advice-loading { text-align:center; padding:20px; }
-        .spinner { width:36px; height:36px; border:3px solid #d1fae5;
-            border-top-color:#16a34a; border-radius:50%; margin:0 auto 12px;
-            animation: spin .8s linear infinite; }
-        @@keyframes spin { to { transform:rotate(360deg); } }
-        .loading-text { color:#6b7280; font-size:14px; }
+        .navbar {
+            background: white;
+            padding: 14px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 12px rgba(0,0,0,.06);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-        .advice-title { font-weight:700; font-size:16px; margin-bottom:14px;
-            display:flex; align-items:center; gap:8px; }
-        .advice-text { font-size:15px; color:#374151; line-height:1.7; margin-bottom:20px; }
+        .logo {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--green-dark);
+            text-decoration: none;
+        }
 
-        .action-items { background:#f0fdf4; border-radius:14px; padding:16px; margin-bottom:18px; }
-        .action-title { font-weight:600; font-size:13px; color:#15803d;
-            margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px; }
-        .action-item { display:flex; align-items:flex-start; gap:10px;
-            margin-bottom:8px; font-size:14px; color:#374151; }
-        .action-check { width:20px; height:20px; background:#16a34a; border-radius:50%;
-            display:flex; align-items:center; justify-content:center; flex-shrink:0;
-            margin-top:1px; }
-        .action-check::after { content:'✓'; color:white; font-size:11px; font-weight:700; }
+        .nav-link {
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 12px;
+            color: var(--muted);
+            background: var(--green-bg);
+            font-size: 14px;
+            font-weight: 600;
+            transition: all .2s;
+        }
 
-        .motivation-box { background:linear-gradient(135deg, #ecfdf5, #d1fae5);
-            border-radius:14px; padding:16px; text-align:center;
-            font-size:14px; color:#065f46; font-style:italic; margin-bottom:20px; }
+            .nav-link:hover {
+                background: var(--green-light);
+                color: var(--green-deeper);
+            }
 
-        /* ── Кнопки після поради ── */
-        .after-advice-buttons { display:flex; flex-direction:column; gap:10px; }
-        .btn-chat { padding:13px; background:white; border:1.5px solid #16a34a;
-            color:#16a34a; border-radius:12px; cursor:pointer; font-size:14px;
-            font-weight:600; text-align:center; }
-        .btn-back { padding:13px; background:#f9fafb; border:1.5px solid #e5e7eb;
-            color:#6b7280; border-radius:12px; cursor:pointer; font-size:14px;
-            text-align:center; text-decoration:none; display:block; }
+        .page-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 760px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px 20px 0;
+        }
 
-        /* ── Free Chat ── */
-        .chat-section { display:none; }
-        .chat-section.visible { display:block; margin-top:20px; }
-        .chat-messages { max-height:350px; overflow-y:auto; margin-bottom:16px;
-            display:flex; flex-direction:column; gap:12px; }
+        .agent-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
 
-        .msg { max-width:85%; padding:12px 16px; border-radius:16px; font-size:14px;
-            line-height:1.6; }
-        .msg-user { background:#16a34a; color:white; align-self:flex-end;
-            border-bottom-right-radius:4px; }
-        .msg-coach { background:white; color:#374151; align-self:flex-start;
-            border:1px solid #e5e7eb; border-bottom-left-radius:4px; }
-        .msg-loading { background:#f9fafb; color:#9ca3af; align-self:flex-start; }
+        .agent-emoji {
+            font-size: 52px;
+            display: block;
+            margin-bottom: 10px;
+        }
 
-        .chat-input-row { display:flex; gap:10px; }
-        .chat-input { flex:1; padding:12px 16px; border:1.5px solid #e5e7eb;
-            border-radius:12px; font-size:14px; font-family:Inter,sans-serif;
-            outline:none; resize:none; min-height:48px; max-height:120px; }
-        .chat-input:focus { border-color:#16a34a; }
-        .btn-send { padding:12px 18px; background:#16a34a; color:white;
-            border:none; border-radius:12px; cursor:pointer; font-size:18px; }
-        .btn-send:disabled { background:#d1fae5; cursor:not-allowed; }
+        .agent-title {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .agent-subtitle {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .chat-card {
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: 0 4px 24px rgba(0,0,0,.07);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            scroll-behavior: smooth;
+            min-height: 400px;
+            max-height: 60vh;
+        }
+
+        .msg {
+            max-width: 80%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.65;
+        }
+
+        .msg-user {
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .msg-agent-wrap {
+            display: flex;
+            align-items: flex-end;
+            gap: 6px;
+            align-self: flex-start;
+            max-width: 82%;
+        }
+
+        .msg-agent {
+            background: #f9fafb;
+            color: var(--text);
+            border: 1.5px solid var(--border);
+            border-bottom-left-radius: 4px;
+            white-space: pre-wrap;
+        }
+
+        .msg-loading {
+            background: #f9fafb;
+            color: #9ca3af;
+            align-self: flex-start;
+            font-size: 22px;
+            letter-spacing: 5px;
+            border: 1.5px solid var(--border);
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            padding: 12px 20px;
+        }
+
+        .chat-input-area {
+            padding: 14px 16px;
+            border-top: 1.5px solid var(--border);
+            background: white;
+        }
+
+        .chat-input-row {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            font-size: 14px;
+            font-family: 'Nunito', sans-serif;
+            outline: none;
+            resize: none;
+            min-height: 48px;
+            max-height: 120px;
+            transition: border-color .2s;
+            background: #fafafa;
+            line-height: 1.5;
+        }
+
+            .chat-input:focus {
+                border-color: var(--green);
+                background: white;
+            }
+
+        .chat-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-send {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s;
+            box-shadow: 0 3px 10px rgba(22,163,74,.3);
+        }
+
+            .btn-send:disabled {
+                background: var(--green-light);
+                box-shadow: none;
+                cursor: not-allowed;
+            }
+
+            .btn-send:not(:disabled):hover {
+                transform: scale(1.06);
+            }
+
+        .btn-voice-chat {
+            width: 48px;
+            height: 48px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s;
+        }
+
+            .btn-voice-chat:hover {
+                border-color: var(--green);
+            }
+
+            .btn-voice-chat.recording {
+                background: #fef2f2;
+                border-color: var(--red);
+                animation: pulse 1s infinite;
+            }
+
+        .recording-indicator {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            background: #fef2f2;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: var(--red);
+            font-weight: 600;
+        }
+
+            .recording-indicator.visible {
+                display: flex;
+            }
+
+        .rec-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--red);
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+
+        @@keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: .4;
+            }
+        }
+
+        .tts-status-bar {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0 10px;
+            font-size: 12px;
+            color: var(--green-deeper);
+        }
+
+            .tts-status-bar.visible {
+                display: flex;
+            }
+
+        .tts-wave {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+            .tts-wave span {
+                display: block;
+                width: 3px;
+                background: var(--green);
+                border-radius: 2px;
+                animation: wave .8s ease-in-out infinite;
+            }
+
+                .tts-wave span:nth-child(1) {
+                    height: 8px;
+                    animation-delay: 0s;
+                }
+
+                .tts-wave span:nth-child(2) {
+                    height: 14px;
+                    animation-delay: .1s;
+                }
+
+                .tts-wave span:nth-child(3) {
+                    height: 10px;
+                    animation-delay: .2s;
+                }
+
+                .tts-wave span:nth-child(4) {
+                    height: 16px;
+                    animation-delay: .15s;
+                }
+
+                .tts-wave span:nth-child(5) {
+                    height: 8px;
+                    animation-delay: .05s;
+                }
+
+        @@keyframes wave {
+            0%, 100% {
+                transform: scaleY(1);
+            }
+
+            50% {
+                transform: scaleY(.4);
+            }
+        }
+
+        .chat-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 8px;
+        }
+
+        .toolbar-hint {
+            font-size: 11px;
+            color: #d1d5db;
+        }
+
+        .btn-summary {
+            font-size: 12px;
+            font-weight: 600;
+            font-family: 'Nunito', sans-serif;
+            color: var(--muted);
+            background: none;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 5px 12px;
+            cursor: pointer;
+            transition: all .2s;
+        }
+
+            .btn-summary:hover {
+                border-color: var(--green);
+                color: var(--green-dark);
+            }
+
+        .notice-bar {
+            display: none;
+            background: #fff7ed;
+            border-radius: 12px;
+            padding: 8px 14px;
+            font-size: 12px;
+            color: #92400e;
+            margin-bottom: 10px;
+        }
+
+            .notice-bar.visible {
+                display: block;
+            }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,.5);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+            .modal-overlay.open {
+                display: flex;
+            }
+
+        .modal {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalIn .3s ease;
+            position: relative;
+        }
+
+        @@keyframes modalIn {
+            from {
+                opacity: 0;
+                transform: scale(.95) translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: white;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .2s;
+        }
+
+            .modal-close:hover {
+                border-color: var(--red);
+                color: var(--red);
+            }
+
+        .summary-title {
+            font-family: 'Unbounded', sans-serif;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .summary-date {
+            font-size: 12px;
+            color: var(--muted);
+            margin-bottom: 24px;
+        }
+
+        .summary-block {
+            margin-bottom: 20px;
+        }
+
+        .summary-block-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--green-deeper);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+            .summary-block-title::before {
+                content: '';
+                display: block;
+                width: 16px;
+                height: 3px;
+                background: var(--green);
+                border-radius: 2px;
+            }
+
+        .summary-chat-history {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sum-msg {
+            font-size: 13px;
+            padding: 10px 14px;
+            border-radius: 12px;
+        }
+
+        .sum-msg-user {
+            background: var(--green-light);
+            color: var(--green-deeper);
+            margin-left: 40px;
+        }
+
+        .sum-msg-agent {
+            background: #f9fafb;
+            color: var(--text);
+            border: 1px solid var(--border);
+            margin-right: 40px;
+        }
+
+        .sum-msg-role {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 4px;
+        }
+
+        .summary-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .btn-summary-print {
+            flex: 1;
+            padding: 12px;
+            background: white;
+            border: 2px solid var(--border);
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: 'Nunito', sans-serif;
+            color: var(--text);
+            text-align: center;
+            transition: all .2s;
+        }
+
+            .btn-summary-print:hover {
+                border-color: var(--green);
+            }
+
+        .btn-primary {
+            flex: 1;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--green), var(--green-dark));
+            color: white;
+            border: none;
+            border-radius: 14px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            font-family: 'Nunito', sans-serif;
+            transition: all .2s;
+        }
+
+            .btn-primary:hover {
+                transform: translateY(-1px);
+            }
+
+        @@keyframes fadeUp {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @@media (max-width: 600px) {
+            .page-wrap {
+                padding: 12px 10px 0;
+            }
+
+            .agent-title {
+                font-size: 15px;
+            }
+
+            .modal {
+                padding: 20px;
+            }
+
+            .navbar {
+                padding: 12px 16px;
+            }
+        }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
         <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
-        <a asp-controller="Analytics" asp-action="Index" asp-route-id="@habitId" class="nav-link">
-            ← Аналітика
-        </a>
+        <a asp-controller="Analytics" asp-action="Index"
+           asp-route-habitId="@habitId" class="nav-link">← Аналітика</a>
     </nav>
 
-    <div class="container">
+    <div class="page-wrap">
 
-        <div class="coach-header">
-            <span class="coach-emoji">@Model.SessionEmoji</span>
-            <div class="coach-title">@Model.SessionTitle</div>
-            <div class="coach-subtitle">
+        <div class="agent-header">
+            <span class="agent-emoji">@Model.SessionEmoji</span>
+            <div class="agent-title">@Model.SessionTitle</div>
+            <div class="agent-subtitle">
                 @(Model.SessionType switch
                 {
-                    HabitFlow.BLL.DTOs.CoachSessionType.Onboarding => "Відповідай чесно — це тільки для тебе",
-                    HabitFlow.BLL.DTOs.CoachSessionType.WeeklyCheckIn => "Тижневий огляд твоїх звичок",
-                    HabitFlow.BLL.DTOs.CoachSessionType.AfterStreakBreak => "Давай розберемось що сталось і як рухатись далі",
-                    HabitFlow.BLL.DTOs.CoachSessionType.MilestoneReached => "Відзнач цей момент — ти цього заслуговуєш",
-                    _ => "Запитай свого особистого коуча",
+                    HabitFlow.BLL.DTOs.CoachSessionType.Onboarding => "Агент допоможе тобі розпочати нову звичку",
+                    HabitFlow.BLL.DTOs.CoachSessionType.WeeklyCheckIn => "Тижневий огляд — агент аналізує твої результати",
+                    HabitFlow.BLL.DTOs.CoachSessionType.AfterStreakBreak => "Агент допоможе розібратись що сталось і рухатись далі",
+                    HabitFlow.BLL.DTOs.CoachSessionType.MilestoneReached => "Агент вітає тебе з досягненням!",
+                    _ => "Твій персональний агент завжди поруч",
                 })
             </div>
         </div>
 
-        <div class="progress-bar">
-            <div class="progress-fill" id="progressFill" style="width:0%"></div>
-        </div>
+        <div class="chat-card">
+            <div class="chat-messages" id="chatMessages"></div>
 
-        <div id="questionsContainer">
-            @for (int i = 0; i < Model.Questions.Count; i++)
-            {
-                var q = Model.Questions[i];
-                <div class="question-card @(i == 0 ? "active" : "")"
-                     id="question-@i"
-                     data-question-id="@q.Id"
-                     data-required="@q.IsRequired.ToString().ToLower()">
+            <div class="chat-input-area">
 
-                    <div class="question-number">Питання @(i + 1) з @Model.Questions.Count</div>
-                    @{
-                        var questionText = q.Text
-                        .Replace("«»", $"«{habitName}»")
-                        .Replace("« »", $"«{habitName}»")
-                        .Replace("{habitName}", habitName);
-                    }
+                <div class="notice-bar" id="noticeBar"></div>
 
-                    <div class="question-text">@questionText</div>
-                    @if (!string.IsNullOrEmpty(q.Hint))
-                    {
-                        <div class="question-hint">@q.Hint</div>
-                    }
+                <div class="recording-indicator" id="recordingIndicator">
+                    <div class="rec-dot"></div>
+                    Слухаю... говори українською
+                    <button onclick="stopLiveSession()" style="
+                    margin-left:auto;font-size:11px;font-weight:600;
+                    font-family:'Nunito',sans-serif;border:1px solid var(--red);
+                    border-radius:8px;background:white;padding:2px 8px;
+                    cursor:pointer;color:var(--red);">
+                        ⏹ Зупинити
+                    </button>
+                </div>
 
-                    <textarea class="answer-input"
-                              placeholder="Твоя відповідь..."
-                              rows="3"></textarea>
+                <div class="tts-status-bar" id="ttsStatusBar">
+                    <div class="tts-wave">
+                        <span></span><span></span><span></span><span></span><span></span>
+                    </div>
+                    Агент говорить...
+                    <button onclick="stopLiveAudio()" style="
+                    font-size:11px;font-weight:600;font-family:'Nunito',sans-serif;
+                    border:1px solid var(--border);border-radius:8px;
+                    background:white;padding:2px 8px;cursor:pointer;color:var(--muted);">
+                        ⏹ Зупинити
+                    </button>
+                </div>
 
-                    @if (!q.IsRequired)
-                    {
-                        <div class="skip-hint">Це питання необов'язкове — можеш пропустити</div>
-                    }
-
-                    <div class="nav-buttons">
-                        @if (i > 0)
-                        {
-                            <button class="btn-prev" onclick="prevQuestion(@i)">← Назад</button>
-                        }
-                        <button class="btn-next" id="btn-next-@i"
-                                onclick="nextQuestion(@i, @Model.Questions.Count)">
-                            @(i == Model.Questions.Count - 1 ? "Отримати пораду 🚀" : "Далі →")
+                <div class="chat-input-row">
+                    <textarea class="chat-input"
+                              id="chatInput"
+                              placeholder="Напиши або скажи щось агенту..."
+                              rows="1"
+                              onkeydown="handleChatKey(event)"></textarea>
+                    <div class="chat-btns">
+                        <button class="btn-voice-chat" id="btnVoiceChat"
+                                onclick="toggleVoiceChat()" type="button"
+                                title="Натисни і говори українською">
+                            🎤
                         </button>
+                        <button class="btn-send" id="btnSend" onclick="sendChat()">➤</button>
                     </div>
                 </div>
-            }
-        </div>
 
-        <div class="advice-card" id="adviceCard">
-
-            <div class="advice-loading" id="adviceLoading">
-                <div class="spinner"></div>
-                <div class="loading-text">Коуч аналізує твої відповіді...</div>
-            </div>
-
-            <div id="adviceContent" style="display:none">
-                <div class="advice-title">🤖 Порада коуча</div>
-                <div class="advice-text" id="adviceText"></div>
-
-                <div class="action-items" id="actionItemsBlock">
-                    <div class="action-title">Конкретні кроки</div>
-                    <div id="actionItemsList"></div>
+                <div class="chat-toolbar">
+                    <span class="toolbar-hint">Enter — надіслати · Shift+Enter — новий рядок</span>
+                    <button class="btn-summary" onclick="showSummary()">📋 Підсумок розмови</button>
                 </div>
 
-                <div class="motivation-box" id="motivationBox"></div>
-
-                <div class="after-advice-buttons">
-                    <button class="btn-chat" onclick="showChat()">
-                        💬 Продовжити розмову з коучем
-                    </button>
-                    <a asp-controller="Analytics" asp-action="Index"
-                       asp-route-id="@habitId" class="btn-back">
-                        ← Повернутись до аналітики
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Free Chat -->
-        <div class="chat-section" id="chatSection">
-            <div class="advice-title" style="margin-top:0">💬 Продовж розмову</div>
-            <div class="chat-messages" id="chatMessages"></div>
-            <div class="chat-input-row">
-                <textarea class="chat-input" id="chatInput"
-                          placeholder="Запитай ще щось..."
-                          rows="1"
-                          onkeydown="handleChatKey(event)"></textarea>
-                <button class="btn-send" id="btnSend" onclick="sendChat()">➤</button>
             </div>
         </div>
 
     </div>
 
+    <!-- Модал підсумку -->
+    <div class="modal-overlay" id="summaryOverlay" onclick="closeSummaryOutside(event)">
+        <div class="modal">
+            <button class="modal-close" onclick="closeSummary()">✕</button>
+            <div class="summary-title">📋 Підсумок розмови з агентом</div>
+            <div class="summary-date" id="summaryDate"></div>
+            <div class="summary-block">
+                <div class="summary-block-title">Діалог з агентом</div>
+                <div class="summary-chat-history" id="summaryChatHistory"></div>
+            </div>
+            <div class="summary-actions">
+                <button class="btn-summary-print" onclick="printSummary()">🖨️ Роздрукувати</button>
+                <button class="btn-primary" onclick="closeSummary()">Закрити</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        const HABIT_ID    = '@habitId';
+        const HABIT_ID = '@habitId';
         const SESSION_TYPE = '@((int)Model.SessionType)';
-        const TOKEN        = document.querySelector('input[name="__RequestVerificationToken"]')?.value || '';
-        const totalQ       = @Model.Questions.Count;
 
-        let answers  = [];
-        let history  = [];
-        let currentQ = 0;
+        // ── Стан чату ────────────────────────────────────────────────────
+        let chatHistory = [];
+        let isSending = false;
 
-        function nextQuestion(idx, total) {
-            const card     = document.getElementById(`question-${idx}`);
-            const textarea = card.querySelector('.answer-input');
-            const required = card.dataset.required === 'true';
-            const qId      = card.dataset.questionId;
+        // ── Стан Gemini Live ─────────────────────────────────────────────
+        let liveWs = null;
+        let liveAudioCtx = null;   // мікрофон (16 kHz)
+        let liveProcessor = null;
+        let liveIsActive = false;
 
-            if (required && !textarea.value.trim()) {
-                textarea.style.borderColor = '#ef4444';
-                textarea.placeholder = 'Будь ласка, дай відповідь на це питання';
-                return;
-            }
+        let livePlaybackCtx = null;  // відтворення (24 kHz) — один на всю сесію
+        let liveNextStartTime = 0;    // час старту наступного чанку
+        let liveHasAudio = false; // чи вже запланований хоч один чанк
 
-            const existing = answers.findIndex(a => a.questionId === qId);
-            if (existing >= 0)
-                answers[existing].answer = textarea.value.trim();
-            else
-                answers.push({ questionId: qId, answer: textarea.value.trim() });
+        // Накопичення транскрипту (Gemini відправляє по шматках)
+        const _transcriptBuf = { model: '', user: '' };
+        const _transcriptTimer = { model: null, user: null };
 
-            if (idx + 1 >= total) {
-                submitAnswers();
-            } else {
-                card.classList.remove('active');
-                document.getElementById(`question-${idx + 1}`).classList.add('active');
-                currentQ = idx + 1;
-                updateProgress();
-            }
+        // ── Утиліти UI ───────────────────────────────────────────────────
+        function showTtsBar(visible) {
+            document.getElementById('ttsStatusBar').classList.toggle('visible', visible);
         }
 
-        function prevQuestion(idx) {
-            document.getElementById(`question-${idx}`).classList.remove('active');
-            document.getElementById(`question-${idx - 1}`).classList.add('active');
-            currentQ = idx - 1;
-            updateProgress();
+        function showNotice(text) {
+            const bar = document.getElementById('noticeBar');
+            bar.textContent = text;
+            bar.classList.add('visible');
         }
 
-        function updateProgress() {
-            const pct = Math.round((currentQ / totalQ) * 100);
-            document.getElementById('progressFill').style.width = pct + '%';
+        function hideNotice() {
+            document.getElementById('noticeBar').classList.remove('visible');
         }
 
-        async function submitAnswers() {
-            document.getElementById('questionsContainer').style.display = 'none';
-            const card = document.getElementById('adviceCard');
-            card.classList.add('visible');
-            document.getElementById('progressFill').style.width = '100%';
+        // ── Рендер повідомлень ───────────────────────────────────────────
+        function appendUserMsg(text) {
+            const c = document.getElementById('chatMessages');
+            const d = document.createElement('div');
+            d.className = 'msg msg-user';
+            d.textContent = text;
+            d.style.animation = 'fadeUp .25s ease';
+            c.appendChild(d);
+            c.scrollTop = c.scrollHeight;
+        }
 
+        function appendAgentMsg(text) {
+            const c = document.getElementById('chatMessages');
+            const wrap = document.createElement('div');
+            wrap.className = 'msg-agent-wrap';
+            wrap.style.animation = 'fadeUp .3s ease';
+            const d = document.createElement('div');
+            d.className = 'msg msg-agent';
+            d.textContent = text;
+            wrap.appendChild(d);
+            c.appendChild(wrap);
+            c.scrollTop = c.scrollHeight;
+        }
+
+        function appendLoading(id) {
+            const c = document.getElementById('chatMessages');
+            const d = document.createElement('div');
+            d.id = id;
+            d.className = 'msg msg-loading';
+            d.textContent = '· · ·';
+            c.appendChild(d);
+            c.scrollTop = c.scrollHeight;
+        }
+
+        // ── Початкове привітання ─────────────────────────────────────────
+        async function loadGreeting() {
+            const loadId = 'init-loading';
+            appendLoading(loadId);
             try {
                 const resp = await fetch('/Coach/Advice', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type':       'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        habitId:     HABIT_ID,
+                        habitId: HABIT_ID,
                         sessionType: parseInt(SESSION_TYPE),
-                        answers:     answers,
-                        history:     [],
+                        answers: [],
+                        history: [],
                     }),
                 });
-
-                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                document.getElementById(loadId)?.remove();
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
                 const data = await resp.json();
-                renderAdvice(data);
-
-                history.push({
-                    role:    'user',
-                    content: answers.map(a => `${a.questionId}: ${a.answer}`).join('\n'),
-                });
-                history.push({
-                    role:    'model',
-                    content: data.advice,
-                });
-
-            } catch (err) {
-                console.error(err);
-                renderAdvice({
-                    advice: 'На жаль, виникла помилка. Спробуй ще раз.',
-                    actionItems: [],
-                    motivation: '',
-                });
+                const greeting = data.advice || 'Привіт! Я твій агент. Як можу допомогти?';
+                chatHistory.push({ role: 'model', content: greeting });
+                appendAgentMsg(greeting);
+            } catch {
+                document.getElementById(loadId)?.remove();
+                const fallback = 'Привіт! Я твій персональний агент. Розкажи, як у тебе справи з цією звичкою?';
+                chatHistory.push({ role: 'model', content: fallback });
+                appendAgentMsg(fallback);
             }
         }
 
-        function renderAdvice(data) {
-            document.getElementById('adviceLoading').style.display = 'none';
-            document.getElementById('adviceContent').style.display = 'block';
-            document.getElementById('adviceText').textContent = data.advice;
-
-            const list = document.getElementById('actionItemsList');
-            list.innerHTML = '';
-            if (data.actionItems && data.actionItems.length > 0) {
-                data.actionItems.forEach(item => {
-                    list.innerHTML += `
-                        <div class="action-item">
-                            <div class="action-check"></div>
-                            <span>${item}</span>
-                        </div>`;
-                });
-                document.getElementById('actionItemsBlock').style.display = 'block';
-            } else {
-                document.getElementById('actionItemsBlock').style.display = 'none';
-            }
-
-            if (data.motivation) {
-                document.getElementById('motivationBox').textContent = `"${data.motivation}"`;
-                document.getElementById('motivationBox').style.display = 'block';
-            } else {
-                document.getElementById('motivationBox').style.display = 'none';
-            }
-        }
-
-        function showChat() {
-            document.getElementById('chatSection').classList.add('visible');
-
-            const lastAdvice = document.getElementById('adviceText').textContent;
-            if (lastAdvice) {
-                appendMessage('coach', lastAdvice);
-            }
-
-            document.getElementById('chatInput').focus();
-        }
-
-        function handleChatKey(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendChat();
-            }
-        }
-
+        // ── Відправка тексту ─────────────────────────────────────────────
         async function sendChat() {
             const input = document.getElementById('chatInput');
-            const text  = input.value.trim();
-            if (!text) return;
+            const text = input.value.trim();
+            if (!text || isSending) return;
 
+            isSending = true;
             input.value = '';
+            input.style.height = 'auto';
             document.getElementById('btnSend').disabled = true;
-            appendMessage('user', text);
 
-            const loadingId = 'loading-' + Date.now();
-            appendMessage('loading', '...', loadingId);
+            appendUserMsg(text);
+            chatHistory.push({ role: 'user', content: text });
 
-            history.push({ role: 'user', content: text });
+            const loadId = 'load-' + Date.now();
+            appendLoading(loadId);
 
             try {
                 const resp = await fetch('/Coach/Chat', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type':             'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        habitId:      HABIT_ID,
-                        sessionType:  5, // FreeChat
-                        answers:      [],
-                        history:      history.slice(-10),
-                        userMessage:  text,
+                        habitId: HABIT_ID,
+                        sessionType: parseInt(SESSION_TYPE),
+                        answers: [],
+                        history: chatHistory.slice(-12),
+                        userMessage: text,
                     }),
                 });
-
+                document.getElementById(loadId)?.remove();
                 const data = await resp.json();
-
-                document.getElementById(loadingId)?.remove();
-
-                const reply = data.advice || 'Вибач, не можу відповісти зараз.';
-                appendMessage('coach', reply);
-                history.push({ role: 'model', content: reply });
-
-            } catch (err) {
-                document.getElementById(loadingId)?.remove();
-                appendMessage('coach', 'Виникла помилка. Спробуй ще раз.');
+                const reply = data.advice || 'Вибач, не можу відповісти зараз. Спробуй ще раз.';
+                chatHistory.push({ role: 'model', content: reply });
+                appendAgentMsg(reply);
+            } catch {
+                document.getElementById(loadId)?.remove();
+                const errMsg = "Виникла помилка зв'язку. Спробуй ще раз.";
+                chatHistory.push({ role: 'model', content: errMsg });
+                appendAgentMsg(errMsg);
             }
 
+            isSending = false;
             document.getElementById('btnSend').disabled = false;
-            input.focus();
+            document.getElementById('chatInput').focus();
         }
 
-        function appendMessage(type, text, id) {
-            const container = document.getElementById('chatMessages');
-            const div = document.createElement('div');
-            if (id) div.id = id;
-
-            div.className = type === 'user' ? 'msg msg-user'
-                : type === 'loading'        ? 'msg msg-loading'
-                : 'msg msg-coach';
-
-            div.textContent = text;
-            container.appendChild(div);
-            container.scrollTop = container.scrollHeight;
+        function handleChatKey(e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
         }
 
-        document.querySelectorAll('textarea').forEach(t => {
-            t.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 200) + 'px';
-                if (this.style.borderColor === 'rgb(239, 68, 68)')
-                    this.style.borderColor = '';
-            });
+        // ── Gemini Live — голосовий режим ────────────────────────────────
+        async function toggleVoiceChat() {
+            if (liveIsActive) stopLiveSession();
+            else await startLiveSession();
+        }
+
+        async function startLiveSession() {
+            const btn = document.getElementById('btnVoiceChat');
+            btn.textContent = '⏳';
+            btn.disabled = true;
+            hideNotice();
+
+            // Отримуємо userId
+            let userId = '';
+            try {
+                const resp = await fetch('/Coach/GetUserId');
+                const data = await resp.json();
+                userId = data.userId;
+                if (!userId) throw new Error('userId null');
+                console.log('userId:', userId);
+            } catch (e) {
+                console.error('Помилка userId:', e);
+                showNotice('⚠️ Помилка авторизації. Перезайди в акаунт.');
+                btn.textContent = '🎤';
+                btn.disabled = false;
+                return;
+            }
+
+            // Один AudioContext для відтворення на всю сесію
+            livePlaybackCtx = new AudioContext({ sampleRate: 24000 });
+            liveNextStartTime = 0;
+            liveHasAudio = false;
+
+            const wsUrl = `ws://localhost:5153/Coach/VoiceStream/${HABIT_ID}?userId=${userId}`;
+            console.log('URL:', wsUrl);
+
+            liveWs = new WebSocket(wsUrl);
+            liveWs.binaryType = 'arraybuffer';
+
+            liveWs.onopen = async () => {
+                console.log('✅ WebSocket ВІДКРИТО!');
+                liveIsActive = true;
+                btn.textContent = '⏹';
+                btn.disabled = false;
+                btn.classList.add('recording');
+                document.getElementById('recordingIndicator').classList.add('visible');
+                await startLiveMicrophone();
+            };
+
+            liveWs.onmessage = (e) => {
+                const text = typeof e.data === 'string'
+                    ? e.data
+                    : new TextDecoder().decode(e.data);
+                handleLiveMessage(text);
+            };
+
+            liveWs.onclose = (e) => {
+                console.log('WS закрито:', e.code, e.reason);
+                stopLiveSession();
+            };
+
+            liveWs.onerror = (e) => {
+                console.error('WS помилка:', e);
+                stopLiveSession();
+                showNotice('⚠️ Не вдалось підключитись. Спробуй ще раз.');
+            };
+        }
+
+        // ── Обробка повідомлень від Gemini ───────────────────────────────
+        function handleLiveMessage(json) {
+            let msg;
+            try { msg = JSON.parse(json); }
+            catch (e) {
+                console.warn('JSON parse error:', e.message, '| raw:', json.slice(0, 80));
+                return;
+            }
+
+            // Аудіо чанки — плануємо безперервно
+            const parts = msg?.serverContent?.modelTurn?.parts ?? [];
+            for (const p of parts) {
+                if (p?.inlineData?.mimeType?.startsWith('audio/')) {
+                    schedulePcmChunk(p.inlineData.data);
+                }
+                // Thinking-текст ігноруємо (не показуємо в чаті)
+            }
+
+            // Транскрипт відповіді агента (приходить по шматках — збираємо)
+            const outText = msg?.serverContent?.outputTranscription?.text
+                ?? msg?.serverContent?.outputAudioTranscription?.text;
+            if (outText) accumulateTranscript('model', outText);
+
+            // Транскрипт голосу користувача
+            const inText = msg?.serverContent?.inputTranscription?.text
+                ?? msg?.serverContent?.inputAudioTranscription?.text;
+            if (inText) accumulateTranscript('user', inText);
+        }
+
+        // ── Накопичення транскрипту ──────────────────────────────────────
+        // Gemini відправляє по 1–3 слова, ми чекаємо 800 мс тиші і показуємо одне повідомлення
+        function accumulateTranscript(role, chunk) {
+            _transcriptBuf[role] += chunk;
+            clearTimeout(_transcriptTimer[role]);
+            _transcriptTimer[role] = setTimeout(() => {
+                const text = _transcriptBuf[role].trim();
+                if (text) {
+                    chatHistory.push({ role, content: text });
+                    if (role === 'model') appendAgentMsg(text);
+                    else appendUserMsg(text);
+                }
+                _transcriptBuf[role] = '';
+            }, 800);
+        }
+
+        // ── Ключова функція: планування аудіо без gap-ів ─────────────────
+        // Замість нових AudioContext на кожен чанк — один ctx + src.start(liveNextStartTime)
+        function schedulePcmChunk(b64) {
+            if (!livePlaybackCtx) return;
+
+            const samples = pcmBase64ToFloat32(b64);
+            const duration = samples.length / 24000;
+
+            const buf = livePlaybackCtx.createBuffer(1, samples.length, 24000);
+            buf.copyToChannel(samples, 0);
+
+            const src = livePlaybackCtx.createBufferSource();
+            src.buffer = buf;
+            src.connect(livePlaybackCtx.destination);
+
+            // Перший чанк: старт через 100 мс — щоб наступні чанки встигли прийти
+            if (!liveHasAudio) {
+                liveNextStartTime = livePlaybackCtx.currentTime + 0.1;
+                liveHasAudio = true;
+                showTtsBar(true);
+            }
+
+            src.start(liveNextStartTime);
+            liveNextStartTime += duration; // наступний чанк одразу після — нуль gap
+
+            // Ховаємо індикатор коли черга вичерпана
+            src.onended = () => {
+                if (livePlaybackCtx && liveNextStartTime <= livePlaybackCtx.currentTime + 0.05) {
+                    showTtsBar(false);
+                    liveHasAudio = false;
+                }
+            };
+        }
+
+        // ── Зупинити аудіо (кнопка ⏹ в індикаторі) ──────────────────────
+        function stopLiveAudio() {
+            if (livePlaybackCtx) {
+                livePlaybackCtx.close().catch(() => { });
+                livePlaybackCtx = null;
+            }
+            liveNextStartTime = 0;
+            liveHasAudio = false;
+            showTtsBar(false);
+        }
+
+        // ── Мікрофон через AudioWorklet ──────────────────────────────────
+        async function startLiveMicrophone() {
+            try {
+                liveAudioCtx = new AudioContext({ sampleRate: 16000 });
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const source = liveAudioCtx.createMediaStreamSource(stream);
+
+                console.log('Запит на мікрофон...');
+                await liveAudioCtx.audioWorklet.addModule('/js/pcm-processor.js');
+                liveProcessor = new AudioWorkletNode(liveAudioCtx, 'pcm-processor');
+
+                liveProcessor.port.onmessage = ({ data }) => {
+                    if (liveWs?.readyState === WebSocket.OPEN) {
+                        liveWs.send(JSON.stringify({
+                            realtime_input: {
+                                media_chunks: [{
+                                    mime_type: 'audio/pcm;rate=16000',
+                                    data: arrayBufferToBase64(data)
+                                }]
+                            }
+                        }));
+                    }
+                };
+
+                source.connect(liveProcessor);
+                liveProcessor.connect(liveAudioCtx.destination);
+                console.log('✅ Мікрофон підключено');
+            } catch (e) {
+                console.error('startLiveMicrophone помилка:', e);
+                showNotice('⚠️ Не вдалось підключити мікрофон: ' + e.message);
+            }
+        }
+
+        // ── Зупинити всю сесію ───────────────────────────────────────────
+        function stopLiveSession() {
+            liveIsActive = false;
+
+            // Скидаємо таймери транскрипту
+            clearTimeout(_transcriptTimer.model);
+            clearTimeout(_transcriptTimer.user);
+            _transcriptBuf.model = '';
+            _transcriptBuf.user = '';
+
+            // Мікрофон
+            liveProcessor?.disconnect();
+            liveAudioCtx?.close().catch(() => { });
+            liveAudioCtx = null;
+            liveProcessor = null;
+
+            // Відтворення
+            stopLiveAudio();
+
+            // WebSocket
+            if (liveWs) {
+                liveWs.onclose = null; // щоб не викликати stopLiveSession рекурсивно
+                liveWs.close();
+                liveWs = null;
+            }
+
+            const btn = document.getElementById('btnVoiceChat');
+            btn.textContent = '🎤';
+            btn.disabled = false;
+            btn.classList.remove('recording');
+            document.getElementById('recordingIndicator').classList.remove('visible');
+        }
+
+        // ── PCM helpers ──────────────────────────────────────────────────
+        function pcmBase64ToFloat32(b64) {
+            const bin = atob(b64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            const i16 = new Int16Array(bytes.buffer);
+            const f32 = new Float32Array(i16.length);
+            for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
+            return f32;
+        }
+
+        function arrayBufferToBase64(buf) {
+            let s = '';
+            new Uint8Array(buf).forEach(b => s += String.fromCharCode(b));
+            return btoa(s);
+        }
+
+        // ── Підсумок розмови ─────────────────────────────────────────────
+        function showSummary() {
+            document.getElementById('summaryDate').textContent =
+                new Date().toLocaleString('uk-UA', {
+                    day: 'numeric', month: 'long', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                });
+
+            const histEl = document.getElementById('summaryChatHistory');
+            histEl.innerHTML = '';
+
+            if (!chatHistory.length) {
+                histEl.innerHTML = '<div style="color:var(--muted);font-size:13px;">Розмова ще не розпочалась.</div>';
+            } else {
+                chatHistory.forEach(m => {
+                    const isUser = m.role === 'user';
+                    const div = document.createElement('div');
+                    div.className = 'sum-msg ' + (isUser ? 'sum-msg-user' : 'sum-msg-agent');
+                    div.innerHTML = `<div class="sum-msg-role">${isUser ? '👤 Ти' : '🤖 Агент'}</div>`;
+                    div.appendChild(document.createTextNode(m.content));
+                    histEl.appendChild(div);
+                });
+            }
+
+            document.getElementById('summaryOverlay').classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeSummary() {
+            document.getElementById('summaryOverlay').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function closeSummaryOutside(e) {
+            if (e.target === document.getElementById('summaryOverlay')) closeSummary();
+        }
+
+        function printSummary() { window.print(); }
+
+        // ── Авторозмір textarea ──────────────────────────────────────────
+        document.getElementById('chatInput').addEventListener('input', function () {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 120) + 'px';
         });
 
-        updateProgress();
+        // ── Старт ────────────────────────────────────────────────────────
+        loadGreeting();
     </script>
 
 </body>
