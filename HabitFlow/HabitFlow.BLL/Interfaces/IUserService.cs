@@ -16,5 +16,6 @@ namespace HabitFlow.BLL.Interfaces
         Task SaveOnboardingAsync(Guid userId, OnboardingDto dto);
 
         Task SaveBalanceWheelAsync(Guid userId, BalanceWheelDto dto);
+        Task<(bool Success, string Error)> DeleteProfileAsync(Guid userId, DeleteProfileDto dto);
     }
 }

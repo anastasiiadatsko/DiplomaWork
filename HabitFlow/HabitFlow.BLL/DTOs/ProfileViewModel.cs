@@ -27,6 +27,14 @@ namespace HabitFlow.BLL.DTOs
         public string? WeakestBalanceArea { get; set; }
 
         public double BalanceAverage { get; set; }
+
+        public int CurrentStreak { get; set; }
+
+        public List<string> CompletedDates { get; set; } = new();
+
+        public Dictionary<string, int> DailyCompletionCounts { get; set; } = new();
+
+        public Guid? CoachHabitId { get; set; }
     }
 
     public class Achievement

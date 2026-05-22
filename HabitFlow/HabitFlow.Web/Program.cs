@@ -26,10 +26,8 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IHabitService, HabitService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
-<<<<<<< HEAD
 builder.Services.AddHttpClient<CoachService>();
 builder.Services.AddScoped<ICoachService, CoachService>();
-=======
 
 builder.Services.AddHttpClient<HabitFlow.BLL.Services.CoachService>();
 
@@ -39,7 +37,6 @@ builder.Services.AddScoped<HabitFlow.BLL.Interfaces.ICoachService,
 builder.Services.AddScoped<ISharedHabitService, SharedHabitService>();
 
 builder.Services.AddScoped<ISharedHabitRepository, SharedHabitRepository>();
->>>>>>> develop
 
 builder.Configuration.AddUserSecrets<Program>();
 
@@ -63,15 +60,11 @@ if (!app.Environment.IsDevelopment())
     app.UseHsts();
 }
 
-// ?? WebSocket ПЕРШИМ ?????????????????????????????????????????????????
 app.UseWebSockets(new WebSocketOptions
 {
     KeepAliveInterval = TimeSpan.FromSeconds(30)
 });
 
-// ?? Замість UseHttpsRedirection — свій middleware ????????????????????
-// Порт 5153 (HTTP) не редиректимо — це WebSocket порт
-// Всі інші HTTP запити редиректимо на HTTPS 7060
 app.Use(async (context, next) =>
 {
     var port = context.Connection.LocalPort;
@@ -87,14 +80,12 @@ app.Use(async (context, next) =>
             port, isHttps, context.WebSockets.IsWebSocketRequest);
     }
 
-    // Порт 5153 — пропускаємо без редиректу
     if (!isHttps && port == 5153)
     {
         await next();
         return;
     }
 
-    // Інші HTTP запити ? редирект на HTTPS
     if (!isHttps)
     {
         var httpsUrl = $"https://{context.Request.Host.Host}:7060"
