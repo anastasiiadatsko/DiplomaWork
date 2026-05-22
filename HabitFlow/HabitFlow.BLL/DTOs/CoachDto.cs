@@ -2,18 +2,18 @@
 {
     public enum CoachSessionType
     {
-        Onboarding,     
-        WeeklyCheckIn,  
-        AfterStreakBreak, 
-        MilestoneReached, 
-        FreeChat,       
+        Onboarding,
+        WeeklyCheckIn,
+        AfterStreakBreak,
+        MilestoneReached,
+        FreeChat,
     }
 
     public class CoachQuestion
     {
         public string Id { get; set; } = string.Empty;
         public string Text { get; set; } = string.Empty;
-        public string Hint { get; set; } = string.Empty; // підказка під полем
+        public string Hint { get; set; } = string.Empty;
         public bool IsRequired { get; set; } = true;
     }
 
@@ -22,6 +22,7 @@
         public string QuestionId { get; set; } = string.Empty;
         public string Answer { get; set; } = string.Empty;
     }
+
     public class CoachSessionRequest
     {
         public Guid HabitId { get; set; }
@@ -34,7 +35,6 @@
         public string SessionTitle { get; set; } = string.Empty;
         public string SessionEmoji { get; set; } = string.Empty;
         public List<CoachQuestion> Questions { get; set; } = new();
-
         public CoachContext Context { get; set; } = new();
     }
 
@@ -43,20 +43,21 @@
         public Guid HabitId { get; set; }
         public CoachSessionType SessionType { get; set; }
         public List<CoachAnswer> Answers { get; set; } = new();
-        public List<CoachMessage> History { get; set; } = new(); 
-        public string? UserMessage { get; set; }        
+        public List<CoachMessage> History { get; set; } = new();
+        public string? UserMessage { get; set; }
     }
 
     public class CoachAdviceResponse
     {
         public string Advice { get; set; } = string.Empty;
-        public List<string> ActionItems { get; set; } = new(); 
+        public List<string> ActionItems { get; set; } = new();
         public string Motivation { get; set; } = string.Empty;
         public bool IsStreaming { get; set; } = false;
     }
+
     public class CoachMessage
     {
-        public string Role { get; set; } = string.Empty; 
+        public string Role { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public DateTime SentAt { get; set; } = DateTime.UtcNow;
     }
@@ -73,9 +74,28 @@
         public bool IsStreakActive { get; set; }
         public string MostRiskyDay { get; set; } = string.Empty;
         public string OptimalDayToAct { get; set; } = string.Empty;
-        public double MarkovP00 { get; set; } 
-        public double MarkovP10 { get; set; } 
+        public double MarkovP00 { get; set; }
+        public double MarkovP10 { get; set; }
         public double HabitStrengthScore { get; set; }
         public List<WeekdayStats> WeekdayStats { get; set; } = new();
+    }
+
+    public class CoachSummaryRequest
+    {
+        public Guid HabitId { get; set; }
+        public List<CoachAnswer> Answers { get; set; } = new();
+        public List<CoachMessage> History { get; set; } = new();
+        public string AdviceText { get; set; } = string.Empty;
+        public List<string> ActionItems { get; set; } = new();
+        public string Motivation { get; set; } = string.Empty;
+    }
+
+    public class CoachSummaryResponse
+    {
+        public string Overview { get; set; } = string.Empty;
+        public List<string> KeyInsights { get; set; } = new();
+        public List<string> ActionPlan { get; set; } = new();
+        public string ClosingNote { get; set; } = string.Empty;
+        public string SessionDate { get; set; } = DateTime.UtcNow.ToString("dd.MM.yyyy HH:mm");
     }
 }

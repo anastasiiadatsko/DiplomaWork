@@ -1,8 +1,771 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "HabitFlow — Формуй звички, змінюй життя";
+    Layout = null;
 }
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HabitFlow — Формуй звички, змінюй життя</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0fdf4;
+            color: #111827;
+        }
+
+        /* ── NAVBAR ── */
+        .navbar {
+            background: white;
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: 800;
+            color: #16a34a;
+            text-decoration: none;
+        }
+
+        .nav-btns {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn-login {
+            padding: 8px 20px;
+            border: 2px solid #16a34a;
+            color: #16a34a;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+            .btn-login:hover {
+                background: #f0fdf4;
+            }
+
+        .btn-register {
+            padding: 8px 20px;
+            background: #16a34a;
+            color: white;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: background 0.2s;
+        }
+
+            .btn-register:hover {
+                background: #15803d;
+            }
+
+        /* ── HERO ── */
+        .hero {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 80px 24px 60px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 60px;
+            align-items: center;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #dcfce7;
+            color: #16a34a;
+            padding: 6px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .hero-title {
+            font-size: 48px;
+            font-weight: 800;
+            line-height: 1.15;
+            color: #111827;
+            margin-bottom: 20px;
+        }
+
+            .hero-title span {
+                color: #16a34a;
+            }
+
+        .hero-desc {
+            font-size: 17px;
+            color: #6b7280;
+            line-height: 1.7;
+            margin-bottom: 32px;
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn-hero-primary {
+            padding: 14px 28px;
+            background: #16a34a;
+            color: white;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: background 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+            .btn-hero-primary:hover {
+                background: #15803d;
+            }
+
+        .btn-hero-secondary {
+            padding: 14px 28px;
+            background: white;
+            color: #374151;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            text-decoration: none;
+            border: 2px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+
+            .btn-hero-secondary:hover {
+                border-color: #16a34a;
+                color: #16a34a;
+            }
+
+        .hero-stats {
+            display: flex;
+            gap: 24px;
+            margin-top: 32px;
+        }
+
+        .hero-stat {
+            text-align: center;
+        }
+
+        .hero-stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: #16a34a;
+        }
+
+        .hero-stat-label {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 2px;
+        }
+
+        /* ── DEMO TRACKER (ФІШКА) ── */
+        .demo-card {
+            background: white;
+            border-radius: 24px;
+            padding: 24px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.10);
+            border: 1.5px solid #e5e7eb;
+        }
+
+        .demo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .demo-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .demo-date {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .demo-habits {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .demo-habit {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1.5px solid #f3f4f6;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+            .demo-habit:hover {
+                border-color: #16a34a;
+                background: #f0fdf4;
+            }
+
+            .demo-habit.checked {
+                background: #f0fdf4;
+                border-color: #bbf7d0;
+            }
+
+        .demo-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .demo-habit-name {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .demo-habit.checked .demo-habit-name {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+
+        .demo-check {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .demo-habit.checked .demo-check {
+            background: #16a34a;
+            border-color: #16a34a;
+            color: white;
+        }
+
+        .demo-progress-bar {
+            height: 8px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .demo-progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #4ade80, #16a34a);
+            border-radius: 4px;
+            transition: width 0.4s ease;
+        }
+
+        .demo-progress-text {
+            font-size: 12px;
+            color: #9ca3af;
+            text-align: right;
+        }
+
+        .demo-cta {
+            margin-top: 16px;
+            text-align: center;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+            .demo-cta a {
+                color: #16a34a;
+                font-weight: 600;
+                text-decoration: none;
+            }
+
+        /* ── FEATURES ── */
+        .features {
+            background: white;
+            padding: 80px 24px;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 36px;
+            font-weight: 800;
+            color: #111827;
+            margin-bottom: 12px;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 16px;
+            color: #6b7280;
+            margin-bottom: 48px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .feature-card {
+            padding: 28px;
+            border-radius: 20px;
+            background: #f9fafb;
+            border: 1.5px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+
+            .feature-card:hover {
+                transform: translateY(-4px);
+                box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+                border-color: #bbf7d0;
+            }
+
+        .feature-icon {
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        .feature-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .feature-desc {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        /* ── HOW IT WORKS ── */
+        .how {
+            padding: 80px 24px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+            margin-top: 48px;
+            position: relative;
+        }
+
+            .steps::before {
+                content: '';
+                position: absolute;
+                top: 32px;
+                left: 15%;
+                right: 15%;
+                height: 2px;
+                background: linear-gradient(90deg, #bbf7d0, #16a34a, #bbf7d0);
+                z-index: 0;
+            }
+
+        .step {
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .step-num {
+            width: 64px;
+            height: 64px;
+            background: #16a34a;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 800;
+            margin: 0 auto 16px;
+            box-shadow: 0 4px 16px rgba(22,163,74,0.3);
+        }
+
+        .step-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .step-desc {
+            font-size: 14px;
+            color: #6b7280;
+            line-height: 1.6;
+        }
+
+        /* ── CTA ── */
+        .cta {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            padding: 80px 24px;
+            text-align: center;
+        }
+
+        .cta-title {
+            font-size: 36px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 12px;
+        }
+
+        .cta-desc {
+            font-size: 16px;
+            color: #bbf7d0;
+            margin-bottom: 32px;
+        }
+
+        .btn-cta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 36px;
+            background: white;
+            color: #16a34a;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 700;
+            text-decoration: none;
+            transition: all 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+            .btn-cta:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 28px rgba(0,0,0,0.2);
+            }
+
+        /* ── FOOTER ── */
+        .footer {
+            background: white;
+            padding: 24px;
+            text-align: center;
+            font-size: 13px;
+            color: #9ca3af;
+            border-top: 1px solid #f3f4f6;
+        }
+
+        /* ── RESPONSIVE ── */
+        @@media (max-width: 768px) {
+            .navbar {
+                padding: 12px 16px;
+            }
+
+            .hero {
+                grid-template-columns: 1fr;
+                padding: 40px 16px;
+                gap: 32px;
+            }
+
+            .hero-title {
+                font-size: 32px;
+            }
+
+            .hero-stats {
+                gap: 16px;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .steps {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+                .steps::before {
+                    display: none;
+                }
+
+            .cta-title {
+                font-size: 26px;
+            }
+        }
+
+        @@media (min-width: 769px) and (max-width: 1024px) {
+            .hero-title {
+                font-size: 38px;
+            }
+
+            .features-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- NAVBAR -->
+    <nav class="navbar">
+        <a href="/" class="logo">🌿 HabitFlow</a>
+        <div class="nav-btns">
+            <a asp-controller="Auth" asp-action="Login" class="btn-login">Увійти</a>
+            <a asp-controller="Auth" asp-action="Register" class="btn-register">Почати безкоштовно</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section>
+        <div class="hero">
+            <div>
+                <div class="hero-badge">✨ Розумний трекер звичок</div>
+                <h1 class="hero-title">
+                    Формуй звички,<br>
+                    які <span>змінюють</span><br>
+                    твоє життя
+                </h1>
+                <p class="hero-desc">
+                    HabitFlow допомагає будувати корисні звички за допомогою
+                    аналітики, AI-коуча та персональних рекомендацій.
+                    66 днів до автоматичної звички — починай сьогодні.
+                </p>
+                <div class="hero-btns">
+                    <a asp-controller="Auth" asp-action="Register" class="btn-hero-primary">
+                        🚀 Почати безкоштовно
+                    </a>
+                    <a asp-controller="Auth" asp-action="Login" class="btn-hero-secondary">
+                        Увійти
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">66</div>
+                        <div class="hero-stat-label">днів до звички</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">AI</div>
+                        <div class="hero-stat-label">персональний коуч</div>
+                    </div>
+                    <div class="hero-stat">
+                        <div class="hero-stat-value">∞</div>
+                        <div class="hero-stat-label">звичок безкоштовно</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- DEMO ТРЕКЕР — ФІШКА -->
+            <div class="demo-card">
+                <div class="demo-header">
+                    <div class="demo-title">📅 Спробуй прямо зараз</div>
+                    <div class="demo-date" id="demoDate"></div>
+                </div>
+
+                <div class="demo-habits" id="demoHabits">
+                    <div class="demo-habit" onclick="toggleDemo(this)">
+                        <div class="demo-dot" style="background:#16a34a"></div>
+                        <div class="demo-habit-name">🧘 Ранкова медитація</div>
+                        <div class="demo-check"></div>
+                    </div>
+                    <div class="demo-habit" onclick="toggleDemo(this)">
+                        <div class="demo-dot" style="background:#60a5fa"></div>
+                        <div class="demo-habit-name">📚 Читати 20 хвилин</div>
+                        <div class="demo-check"></div>
+                    </div>
+                    <div class="demo-habit" onclick="toggleDemo(this)">
+                        <div class="demo-dot" style="background:#f59e0b"></div>
+                        <div class="demo-habit-name">💧 Випити 2л води</div>
+                        <div class="demo-check"></div>
+                    </div>
+                    <div class="demo-habit" onclick="toggleDemo(this)">
+                        <div class="demo-dot" style="background:#a78bfa"></div>
+                        <div class="demo-habit-name">🏃 Пробіжка 30 хв</div>
+                        <div class="demo-check"></div>
+                    </div>
+                    <div class="demo-habit" onclick="toggleDemo(this)">
+                        <div class="demo-dot" style="background:#f43f5e"></div>
+                        <div class="demo-habit-name">📝 Записати 3 думки</div>
+                        <div class="demo-check"></div>
+                    </div>
+                </div>
+
+                <div class="demo-progress-bar">
+                    <div class="demo-progress-fill" id="demoFill" style="width:0%"></div>
+                </div>
+                <div class="demo-progress-text" id="demoText">0 з 5 виконано</div>
+
+                <div class="demo-cta">
+                    Подобається? <a asp-controller="Auth" asp-action="Register">Створи свій трекер →</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section class="features">
+        <h2 class="section-title">Все що потрібно для звичок</h2>
+        <p class="section-subtitle">Інструменти які дійсно працюють</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <div class="feature-title">Глибока аналітика</div>
+                <div class="feature-desc">
+                    Серії, consistency rate, теплова карта активності, аналіз по днях тижня.
+                    Знай точно де слабке місце.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <div class="feature-title">AI-коуч</div>
+                <div class="feature-desc">
+                    Персональний коуч на базі Gemini AI. Аналізує твої дані і дає
+                    конкретні поради — без загальних фраз.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔥</div>
+                <div class="feature-title">Серії та мотивація</div>
+                <div class="feature-desc">
+                    Відстежуй серії виконання, отримуй сповіщення про milestone
+                    (7, 14, 21, 30, 66 днів).
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <div class="feature-title">Розумні рекомендації</div>
+                <div class="feature-desc">
+                    AI аналізує патерни і попереджає про ризик зламу серії
+                    до того як це станеться.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📅</div>
+                <div class="feature-title">Гнучке планування</div>
+                <div class="feature-desc">
+                    Щоденні або конкретні дні тижня. Налаштуй під свій ритм
+                    і забудь про пропуски.
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-title">Швидке відстеження</div>
+                <div class="feature-desc">
+                    Один клік — звичка виконана. Дашборд показує все важливе
+                    з першого погляду.
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section>
+        <div class="how">
+            <h2 class="section-title">Як це працює</h2>
+            <p class="section-subtitle">Три простих кроки до нових звичок</p>
+
+            <div class="steps">
+                <div class="step">
+                    <div class="step-num">1</div>
+                    <div class="step-title">Додай звичку</div>
+                    <div class="step-desc">
+                        Обери назву, колір, категорію і частоту.
+                        Займає менше хвилини.
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">2</div>
+                    <div class="step-title">Відстежуй щодня</div>
+                    <div class="step-desc">
+                        Відмічай виконання одним кліком.
+                        Дивись як росте твоя серія.
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-num">3</div>
+                    <div class="step-title">Отримуй поради</div>
+                    <div class="step-desc">
+                        AI-коуч аналізує дані і допомагає
+                        досягти 66 днів — точки автоматизму.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+        <div class="cta-title">Готовий змінити своє життя?</div>
+        <div class="cta-desc">Приєднуйся і почни будувати звички вже сьогодні</div>
+        <a asp-controller="Auth" asp-action="Register" class="btn-cta">
+            🌿 Почати безкоштовно
+        </a>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        © 2025 HabitFlow — Формуй звички, змінюй життя
+    </footer>
+
+    <script>
+        // Дата
+        const d = new Date();
+        const days = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+        const months = ['січ', 'лют', 'бер', 'кві', 'тра', 'чер', 'лип', 'сер', 'вер', 'жов', 'лис', 'гру'];
+        document.getElementById('demoDate').textContent =
+            `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]}`;
+
+        // Демо трекер
+        function toggleDemo(el) {
+            el.classList.toggle('checked');
+            const check = el.querySelector('.demo-check');
+            check.textContent = el.classList.contains('checked') ? '✓' : '';
+            updateProgress();
+        }
+
+        function updateProgress() {
+            const habits = document.querySelectorAll('.demo-habit');
+            const checked = document.querySelectorAll('.demo-habit.checked').length;
+            const pct = (checked / habits.length) * 100;
+            document.getElementById('demoFill').style.width = pct + '%';
+            document.getElementById('demoText').textContent =
+                `${checked} з ${habits.length} виконано`;
+
+            if (checked === habits.length) {
+                document.getElementById('demoText').textContent =
+                    '🎉 Всі виконані! Реєструйся щоб зберегти прогрес';
+            }
+        }
+    </script>
+
+</body>
+</html>
