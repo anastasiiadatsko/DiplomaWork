@@ -3,6 +3,7 @@
 @{
     Layout = null;
     var habitId = ViewBag.HabitId;
+    var habitName = ViewBag.HabitName as string ?? string.Empty;
 }
 
 <!DOCTYPE html>
@@ -169,7 +170,14 @@
                      data-required="@q.IsRequired.ToString().ToLower()">
 
                     <div class="question-number">Питання @(i + 1) з @Model.Questions.Count</div>
-                    <div class="question-text">@q.Text</div>
+                    @{
+                        var questionText = q.Text
+                        .Replace("«»", $"«{habitName}»")
+                        .Replace("« »", $"«{habitName}»")
+                        .Replace("{habitName}", habitName);
+                    }
+
+                    <div class="question-text">@questionText</div>
                     @if (!string.IsNullOrEmpty(q.Hint))
                     {
                         <div class="question-hint">@q.Hint</div>

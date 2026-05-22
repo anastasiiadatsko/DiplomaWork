@@ -11,5 +11,13 @@
             string toEmail,
             string userName,
             string resetLink);
+
+        Task SendHabitInvitationEmailAsync(
+    string toEmail,
+    string userName,
+    string inviterName,
+    string habitName,
+    string acceptLink,
+    string declineLink);
     }
 }

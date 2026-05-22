@@ -13,14 +13,17 @@ namespace HabitFlow.BLL.Services
         private readonly IHabitRepository habitRepository;
         private readonly IHabitLogRepository habitLogRepository;
         private readonly ILogger<HabitService> logger;
+        private readonly ISharedHabitRepository sharedHabitRepository;
 
         public HabitService(
-            IHabitRepository habitRepository,
-            IHabitLogRepository habitLogRepository,
-            ILogger<HabitService> logger)
+    IHabitRepository habitRepository,
+    IHabitLogRepository habitLogRepository,
+    ISharedHabitRepository sharedHabitRepository,
+    ILogger<HabitService> logger)
         {
             this.habitRepository = habitRepository;
             this.habitLogRepository = habitLogRepository;
+            this.sharedHabitRepository = sharedHabitRepository;
             this.logger = logger;
         }
 
@@ -38,7 +41,7 @@ namespace HabitFlow.BLL.Services
             foreach (var habit in habits)
             {
                 var logs = await this.habitLogRepository.GetByHabitIdAsync(habit.Id);
-                var dto = this.MapToDto(habit, logs, today);
+                var dto = await this.MapToDtoAsync(habit, logs, today, userId);
                 habitDtos.Add(dto);
 
                 if (this.IsScheduledToday(habit, today))
@@ -73,14 +76,22 @@ namespace HabitFlow.BLL.Services
 
         public async Task<List<HabitDto>> GetAllHabitsAsync(Guid userId)
         {
-            var habits = await this.habitRepository.GetByUserIdAsync(userId);
+            var ownHabits = await this.habitRepository.GetByUserIdAsync(userId);
+            var sharedHabits = await this.sharedHabitRepository.GetSharedHabitsByUserIdAsync(userId);
+
+            var habits = ownHabits
+                .Concat(sharedHabits)
+                .GroupBy(h => h.Id)
+                .Select(g => g.First())
+                .ToList();
+
             var today = DateTime.Today;
             var result = new List<HabitDto>();
 
             foreach (var habit in habits)
             {
                 var logs = await this.habitLogRepository.GetByHabitIdAsync(habit.Id);
-                result.Add(this.MapToDto(habit, logs, today));
+                result.Add(await this.MapToDtoAsync(habit, logs, today, userId));
             }
 
             return result.OrderByDescending(h => h.IsActive)
@@ -91,14 +102,24 @@ namespace HabitFlow.BLL.Services
         public async Task<HabitDto?> GetByIdAsync(Guid habitId, Guid userId)
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
-            if (habit == null || habit.UserId != userId)
+
+            if (habit == null)
+            {
                 return null;
+            }
+
+            var hasAccess = await this.CanUserAccessHabitAsync(habitId, userId);
+
+            if (!hasAccess)
+            {
+                return null;
+            }
 
             var logs = await this.habitLogRepository.GetByHabitIdAsync(habitId);
-            return this.MapToDto(habit, logs, DateTime.Today);
+            return await this.MapToDtoAsync(habit, logs, DateTime.Today, userId);
         }
 
-        public async Task CreateHabitAsync(Guid userId, CreateHabitDto dto)
+        public async Task<Guid> CreateHabitAsync(Guid userId, CreateHabitDto dto)
         {
             var habit = new Habit
             {
@@ -117,6 +138,8 @@ namespace HabitFlow.BLL.Services
 
             await this.habitRepository.AddAsync(habit);
             this.logger.LogInformation("Звичка створена: {Name} для {UserId}", dto.Name, userId);
+
+            return habit.Id;
         }
 
         public async Task UpdateHabitAsync(Guid habitId, Guid userId, CreateHabitDto dto)
@@ -149,11 +172,26 @@ namespace HabitFlow.BLL.Services
         public async Task<bool> ToggleCompletionAsync(Guid habitId, Guid userId)
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
-            if (habit == null || habit.UserId != userId)
+
+            if (habit == null)
+            {
                 return false;
+            }
+
+            var hasAccess = await this.CanUserAccessHabitAsync(habitId, userId);
+
+            if (!hasAccess)
+            {
+                return false;
+            }
 
             var today = UtcDate(DateTime.Today);
-            var existingLog = await this.habitLogRepository.GetByDateAsync(habitId, today);
+
+            var allLogs = await this.habitLogRepository.GetByHabitIdAsync(habitId);
+
+            var existingLog = allLogs.FirstOrDefault(l =>
+                l.UserId == userId &&
+                l.ScheduledDate.Date == today.Date);
 
             if (existingLog != null)
             {
@@ -164,13 +202,11 @@ namespace HabitFlow.BLL.Services
                     await this.habitLogRepository.UpdateAsync(existingLog);
                     return false;
                 }
-                else
-                {
-                    existingLog.Status = LogStatus.Completed;
-                    existingLog.CompletedAt = DateTime.UtcNow;
-                    await this.habitLogRepository.UpdateAsync(existingLog);
-                    return true;
-                }
+
+                existingLog.Status = LogStatus.Completed;
+                existingLog.CompletedAt = DateTime.UtcNow;
+                await this.habitLogRepository.UpdateAsync(existingLog);
+                return true;
             }
 
             var newLog = new HabitLog
@@ -185,6 +221,7 @@ namespace HabitFlow.BLL.Services
 
             await this.habitLogRepository.AddAsync(newLog);
             this.logger.LogInformation("Звичка відмічена: {HabitId}", habitId);
+
             return true;
         }
 
@@ -201,12 +238,26 @@ namespace HabitFlow.BLL.Services
         public async Task ManualLogAsync(Guid userId, ManualLogDto dto)
         {
             var habit = await this.habitRepository.GetByIdAsync(dto.HabitId);
-            if (habit == null || habit.UserId != userId)
+
+            if (habit == null)
+            {
                 return;
+            }
+
+            var hasAccess = await this.CanUserAccessHabitAsync(dto.HabitId, userId);
+
+            if (!hasAccess)
+            {
+                return;
+            }
 
             var date = UtcDate(dto.Date);
 
-            var existing = await this.habitLogRepository.GetByDateAsync(dto.HabitId, date);
+            var allLogs = await this.habitLogRepository.GetByHabitIdAsync(dto.HabitId);
+
+            var existing = allLogs.FirstOrDefault(l =>
+                l.UserId == userId &&
+                l.ScheduledDate.Date == date.Date);
 
             if (existing != null)
             {
@@ -233,16 +284,31 @@ namespace HabitFlow.BLL.Services
         }
 
         public async Task ManualLogRangeAsync(
-            Guid userId, Guid habitId, DateTime from, DateTime to)
+    Guid userId, Guid habitId, DateTime from, DateTime to)
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
-            if (habit == null || habit.UserId != userId)
+
+            if (habit == null)
+            {
                 return;
+            }
+
+            var hasAccess = await this.CanUserAccessHabitAsync(habitId, userId);
+
+            if (!hasAccess)
+            {
+                return;
+            }
+
+            var allLogs = await this.habitLogRepository.GetByHabitIdAsync(habitId);
 
             for (var d = from.Date; d <= to.Date; d = d.AddDays(1))
             {
                 var date = UtcDate(d);
-                var existing = await this.habitLogRepository.GetByDateAsync(habitId, date);
+
+                var existing = allLogs.FirstOrDefault(l =>
+                    l.UserId == userId &&
+                    l.ScheduledDate.Date == date.Date);
 
                 if (existing != null)
                 {
@@ -269,16 +335,21 @@ namespace HabitFlow.BLL.Services
 
         // ── PRIVATE HELPERS ───────────────────────────────────────────────
 
-        private HabitDto MapToDto(Habit habit, List<HabitLog> logs, DateTime today)
+        private async Task<HabitDto> MapToDtoAsync(
+    Habit habit,
+    List<HabitLog> logs,
+    DateTime today,
+    Guid currentUserId)
         {
             var completedLogs = logs
-                .Where(l => l.Status == LogStatus.Completed)
-                .OrderBy(l => l.ScheduledDate)
-                .ToList();
+    .Where(l => l.UserId == currentUserId && l.Status == LogStatus.Completed)
+    .OrderBy(l => l.ScheduledDate)
+    .ToList();
 
             var isCompletedToday = logs.Any(l =>
-                l.ScheduledDate.Date == today.Date &&
-                l.Status == LogStatus.Completed);
+    l.UserId == currentUserId &&
+    l.ScheduledDate.Date == today.Date &&
+    l.Status == LogStatus.Completed);
 
             var targetDays = new List<DayOfWeek>();
             try
@@ -287,6 +358,13 @@ namespace HabitFlow.BLL.Services
                     habit.TargetDaysJson) ?? new();
             }
             catch { }
+
+            var participants = await this.sharedHabitRepository.GetParticipantsByHabitIdAsync(habit.Id);
+            var participant = participants.FirstOrDefault(p => p.UserId == currentUserId);
+
+            var participantsCount = participants.Count;
+            var isShared = participantsCount > 1;
+            var isOwner = habit.UserId == currentUserId || participant?.IsOwner == true;
 
             return new HabitDto
             {
@@ -302,6 +380,9 @@ namespace HabitFlow.BLL.Services
                 ConsistencyRate = this.CalculateConsistencyRate(habit, completedLogs),
                 StartDate = habit.StartDate,
                 IsActive = habit.IsActive,
+                IsShared = isShared,
+                IsOwner = isOwner,
+                ParticipantsCount = participantsCount,
             };
         }
 
@@ -411,6 +492,24 @@ namespace HabitFlow.BLL.Services
             }
 
             return result;
+        }
+        private async Task<bool> CanUserAccessHabitAsync(Guid habitId, Guid userId)
+        {
+            var habit = await this.habitRepository.GetByIdAsync(habitId);
+
+            if (habit == null)
+            {
+                return false;
+            }
+
+            if (habit.UserId == userId)
+            {
+                return true;
+            }
+
+            var participant = await this.sharedHabitRepository.GetParticipantAsync(habitId, userId);
+
+            return participant != null;
         }
     }
 }

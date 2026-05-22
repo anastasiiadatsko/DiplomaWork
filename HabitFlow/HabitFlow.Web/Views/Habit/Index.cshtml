@@ -238,6 +238,17 @@
             color: #d97706;
         }
 
+        .tag-shared {
+            background: #ecfdf5;
+            color: #15803d;
+            border: 1px solid #bbf7d0;
+        }
+
+        .tag-owner {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
         .habit-stats {
             display: flex;
             gap: 20px;
@@ -391,13 +402,29 @@
                             }
                             <div class="habit-tags">
                                 <span class="tag tag-cat">@habit.Category</span>
+
                                 <span class="tag tag-freq">
                                     @(habit.FrequencyType == HabitFlow.Domain.Enums.FrequencyType.Daily
-                                                                ? "Щодня"
-                                                                : habit.FrequencyType == HabitFlow.Domain.Enums.FrequencyType.Weekly
-                                                                ? "Щотижня"
-                                                                : "Конкретні дні")
+                                        ? "Щодня"
+                                        : habit.FrequencyType == HabitFlow.Domain.Enums.FrequencyType.Weekly
+                                        ? "Щотижня"
+                                        : "Конкретні дні")
                                 </span>
+
+                                @if (habit.IsShared)
+                                {
+                                    <span class="tag tag-shared">
+                                        👥 Спільна · @habit.ParticipantsCount учасники
+                                    </span>
+                                }
+
+                                @if (habit.IsShared && habit.IsOwner)
+                                {
+                                    <span class="tag tag-owner">
+                                        👑 Власник
+                                    </span>
+                                }
+
                                 @if (!habit.IsActive)
                                 {
                                     <span class="tag tag-paused">⏸ Пауза</span>
@@ -419,19 +446,34 @@
                         </div>
 
                         <div class="habit-actions">
-                            <a asp-controller="Habit" asp-action="Edit"
-                               asp-route-id="@habit.Id" class="action-btn btn-edit">✏️</a>
-                            <form asp-controller="Habit" asp-action="Pause"
-                                  asp-route-id="@habit.Id" method="post" style="display:inline">
-                                <button type="submit" class="action-btn btn-pause">
-                                    @(habit.IsActive ? "⏸" : "▶️")
-                                </button>
-                            </form>
-                            <form asp-controller="Habit" asp-action="Delete"
-                                  asp-route-id="@habit.Id" method="post" style="display:inline"
-                                  onsubmit="return confirm('Видалити звичку «@habit.Name»?')">
-                                <button type="submit" class="action-btn btn-delete">🗑️</button>
-                            </form>
+                            @if (habit.IsOwner)
+                            {
+                                <a asp-controller="Habit" asp-action="Edit"
+                                   asp-route-id="@habit.Id" class="action-btn btn-edit">✏️</a>
+
+                                <form asp-controller="Habit" asp-action="Pause"
+                                      asp-route-id="@habit.Id" method="post" style="display:inline">
+                                    <button type="submit" class="action-btn btn-pause">
+                                        @(habit.IsActive ? "⏸" : "▶️")
+                                    </button>
+                                </form>
+
+                                <form asp-controller="Habit" asp-action="Delete"
+                                      asp-route-id="@habit.Id" method="post" style="display:inline"
+                                      onsubmit="return confirm('Видалити звичку «@habit.Name»?')">
+                                    <button type="submit" class="action-btn btn-delete">🗑️</button>
+                                </form>
+                            }
+
+                            @if (habit.IsShared)
+                            {
+                                <a asp-controller="SharedHabit"
+                                   asp-action="Progress"
+                                   asp-route-habitId="@habit.Id"
+                                   class="action-btn"
+                                   style="background:#dcfce7;color:#15803d">👥</a>
+                            }
+
                             <a asp-controller="Analytics" asp-action="Index"
                                asp-route-habitId="@habit.Id"
                                class="action-btn"

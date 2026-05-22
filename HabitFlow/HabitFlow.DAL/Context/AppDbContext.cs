@@ -18,6 +18,10 @@ namespace HabitFlow.DAL.Context
 
         public DbSet<HabitAnalytics> HabitAnalytics => Set<HabitAnalytics>();
 
+        public DbSet<HabitParticipant> HabitParticipants => Set<HabitParticipant>();
+
+        public DbSet<HabitInvitation> HabitInvitations => Set<HabitInvitation>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<User>(e =>
@@ -54,6 +58,45 @@ namespace HabitFlow.DAL.Context
                  .WithOne(h => h.Analytics)
                  .HasForeignKey<HabitAnalytics>(a => a.HabitId)
                  .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<HabitParticipant>(e =>
+            {
+                e.HasKey(p => p.Id);
+
+                e.HasIndex(p => new { p.HabitId, p.UserId }).IsUnique();
+
+                e.HasOne(p => p.Habit)
+                 .WithMany(h => h.Participants)
+                 .HasForeignKey(p => p.HabitId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(p => p.User)
+                 .WithMany(u => u.HabitParticipants)
+                 .HasForeignKey(p => p.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<HabitInvitation>(e =>
+            {
+                e.HasKey(i => i.Id);
+
+                e.HasIndex(i => i.Token).IsUnique();
+
+                e.HasOne(i => i.Habit)
+                 .WithMany(h => h.Invitations)
+                 .HasForeignKey(i => i.HabitId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasOne(i => i.InviterUser)
+                 .WithMany(u => u.SentHabitInvitations)
+                 .HasForeignKey(i => i.InviterUserId)
+                 .OnDelete(DeleteBehavior.Restrict);
+
+                e.HasOne(i => i.InviteeUser)
+                 .WithMany(u => u.ReceivedHabitInvitations)
+                 .HasForeignKey(i => i.InviteeUserId)
+                 .OnDelete(DeleteBehavior.Restrict);
             });
         }
     }
