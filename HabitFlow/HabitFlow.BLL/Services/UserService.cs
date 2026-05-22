@@ -34,9 +34,9 @@ namespace HabitFlow.BLL.Services
         public async Task<ProfileViewModel> GetProfileAsync(Guid userId)
         {
             var user = await this.userRepository.GetByIdAsync(userId);
-            var completedCount = await this.habitLogRepository
-                .GetCompletedCountByUserIdAsync(userId);
+            var completedCount = await this.habitLogRepository.GetCompletedCountByUserIdAsync(userId);
             var habits = await this.habitRepository.GetByUserIdAsync(userId);
+            var coachHabitId = habits.FirstOrDefault()?.Id;
 
             var starLevel = completedCount switch
             {
@@ -79,48 +79,12 @@ namespace HabitFlow.BLL.Services
 
             var achievements = new List<Achievement>
             {
-                new Achievement
-                {
-                    Icon = "🔥",
-                    Name = "Перший крок",
-                    Description = "Виконай першу звичку",
-                    IsUnlocked = completedCount >= 1,
-                },
-                new Achievement
-                {
-                    Icon = "⚡",
-                    Name = "Тиждень сили",
-                    Description = "7 виконань підряд",
-                    IsUnlocked = completedCount >= 7,
-                },
-                new Achievement
-                {
-                    Icon = "🌟",
-                    Name = "На шляху",
-                    Description = "20 виконаних звичок",
-                    IsUnlocked = completedCount >= 20,
-                },
-                new Achievement
-                {
-                    Icon = "💎",
-                    Name = "Серйозний намір",
-                    Description = "50 виконаних звичок",
-                    IsUnlocked = completedCount >= 50,
-                },
-                new Achievement
-                {
-                    Icon = "🏆",
-                    Name = "Майстер звичок",
-                    Description = "100 виконаних звичок",
-                    IsUnlocked = completedCount >= 100,
-                },
-                new Achievement
-                {
-                    Icon = "🧘",
-                    Name = "Дослідник",
-                    Description = "Додай 5 різних звичок",
-                    IsUnlocked = habits.Count >= 5,
-                },
+                new() { Icon = "🔥", Name = "Перший крок", Description = "Виконай першу звичку", IsUnlocked = completedCount >= 1 },
+                new() { Icon = "⚡", Name = "Тиждень сили", Description = "7 виконань підряд", IsUnlocked = completedCount >= 7 },
+                new() { Icon = "🌟", Name = "На шляху", Description = "20 виконаних звичок", IsUnlocked = completedCount >= 20 },
+                new() { Icon = "💎", Name = "Серйозний намір", Description = "50 виконаних звичок", IsUnlocked = completedCount >= 50 },
+                new() { Icon = "🏆", Name = "Майстер звичок", Description = "100 виконаних звичок", IsUnlocked = completedCount >= 100 },
+                new() { Icon = "🧘", Name = "Дослідник", Description = "Додай 5 різних звичок", IsUnlocked = habits.Count >= 5 },
             };
 
             BalanceWheelViewModel? balanceWheel = null;
@@ -151,16 +115,16 @@ namespace HabitFlow.BLL.Services
                         };
 
                         var areas = new Dictionary<string, int>
-            {
-                { "Здоров’я", balanceWheel.Health },
-                { "Кар’єра / навчання", balanceWheel.Career },
-                { "Фінанси", balanceWheel.Finance },
-                { "Стосунки", balanceWheel.Relationships },
-                { "Саморозвиток", balanceWheel.SelfDevelopment },
-                { "Відпочинок", balanceWheel.Rest },
-                { "Емоційний стан", balanceWheel.EmotionalState },
-                { "Побут / оточення", balanceWheel.Environment }
-            };
+                        {
+                            { "Здоров’я", balanceWheel.Health },
+                            { "Кар’єра / навчання", balanceWheel.Career },
+                            { "Фінанси", balanceWheel.Finance },
+                            { "Стосунки", balanceWheel.Relationships },
+                            { "Саморозвиток", balanceWheel.SelfDevelopment },
+                            { "Відпочинок", balanceWheel.Rest },
+                            { "Емоційний стан", balanceWheel.EmotionalState },
+                            { "Побут / оточення", balanceWheel.Environment }
+                        };
 
                         strongestArea = areas.OrderByDescending(x => x.Value).First().Key;
                         weakestArea = areas.OrderBy(x => x.Value).First().Key;
@@ -187,11 +151,11 @@ namespace HabitFlow.BLL.Services
                 StrongestBalanceArea = strongestArea,
                 WeakestBalanceArea = weakestArea,
                 BalanceAverage = balanceAverage,
+                CoachHabitId = coachHabitId,
             };
         }
 
-        public async Task<(bool Success, string Error)> EditProfileAsync(
-            Guid userId, EditProfileDto dto)
+        public async Task<(bool Success, string Error)> EditProfileAsync(Guid userId, EditProfileDto dto)
         {
             var user = await this.userRepository.GetByIdAsync(userId);
             if (user == null)
@@ -202,14 +166,14 @@ namespace HabitFlow.BLL.Services
             user.Name = dto.Name;
             user.TimeZone = dto.TimeZone;
             user.NotificationsEnabled = dto.NotificationsEnabled;
+
             await this.userRepository.UpdateAsync(user);
 
             this.logger.LogInformation("Профіль оновлено: {UserId}", userId);
             return (true, string.Empty);
         }
 
-        public async Task<(bool Success, string Error)> ChangePasswordAsync(
-            Guid userId, ChangePasswordDto dto)
+        public async Task<(bool Success, string Error)> ChangePasswordAsync(Guid userId, ChangePasswordDto dto)
         {
             var user = await this.userRepository.GetByIdAsync(userId);
             if (user == null)
@@ -276,6 +240,28 @@ namespace HabitFlow.BLL.Services
             await this.userRepository.UpdateAsync(user);
 
             this.logger.LogInformation("Колесо балансу збережено: {UserId}", userId);
+        }
+
+        public async Task<(bool Success, string Error)> DeleteProfileAsync(
+    Guid userId,
+    DeleteProfileDto dto)
+        {
+            var user = await this.userRepository.GetByIdAsync(userId);
+
+            if (user == null)
+            {
+                return (false, "Користувача не знайдено");
+            }
+
+            if (!BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
+            {
+                return (false, "Пароль невірний");
+            }
+
+            await this.userRepository.DeleteAsync(user);
+
+            this.logger.LogInformation("Профіль видалено: {UserId}", userId);
+            return (true, string.Empty);
         }
     }
 }

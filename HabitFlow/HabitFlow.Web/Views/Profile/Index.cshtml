@@ -1,432 +1,1141 @@
-﻿@using HabitFlow.BLL.DTOs
-@using System.Text
-@model ProfileViewModel
+﻿@using System.Text
+@model HabitFlow.BLL.DTOs.ProfileViewModel
+
 @{
     Layout = null;
-    var level = Model.StarLevel;
-    var count = Model.TotalCompletedHabits;
+    var timeZone = string.IsNullOrWhiteSpace(Model.User.TimeZone) ? "UTC" : Model.User.TimeZone;
 
-    // Розрахунок параметрів для SVG
-    var glowSize = level * 8 + 10;
-    var starScale = 0.4 + (level - 1) * 0.15;
-    var glowOpacity = 0.2 + (level - 1) * 0.18;
-    var glowColor = "#facc15";
+    var wheelPointsBuilder = new StringBuilder();
 
-    // Функція для генерації точок зірки
-    string GetStarPoints(int centerX, int centerY, int size)
+    if (Model.BalanceWheel != null)
     {
-        var outer = size;
-        var inner = size * 0.42;
-        var pts = new StringBuilder();
-        for (int i = 0; i < 10; i++)
+        var balanceValues = new[]
         {
-            var angle = (i * 36 - 90) * Math.PI / 180;
-            var r = i % 2 == 0 ? outer : inner;
-            var x = centerX + r * Math.Cos(angle);
-            var y = centerY + r * Math.Sin(angle);
-            pts.Append($"{x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)} ");
+            Model.BalanceWheel.Health,
+            Model.BalanceWheel.Career,
+            Model.BalanceWheel.Finance,
+            Model.BalanceWheel.Relationships,
+            Model.BalanceWheel.SelfDevelopment,
+            Model.BalanceWheel.Rest,
+            Model.BalanceWheel.EmotionalState,
+            Model.BalanceWheel.Environment
+        };
+
+        for (int i = 0; i < balanceValues.Length; i++)
+        {
+            var value = Math.Max(0, Math.Min(10, balanceValues[i]));
+            var angle = (-90 + i * 45) * Math.PI / 180;
+            var radius = value / 10.0 * 120;
+            var x = 170 + radius * Math.Cos(angle);
+            var y = 170 + radius * Math.Sin(angle);
+
+            wheelPointsBuilder.Append(x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+            wheelPointsBuilder.Append(",");
+            wheelPointsBuilder.Append(y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+            wheelPointsBuilder.Append(" ");
         }
-        return pts.ToString().Trim();
     }
+
+    var wheelPolygonPoints = wheelPointsBuilder.ToString().Trim();
 }
+
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HabitFlow — Профіль</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * {
+            box-sizing: border-box;
+        }
 
         body {
-            font-family: 'Inter', sans-serif;
+            margin: 0;
+            font-family: Arial, sans-serif;
             background: #f0fdf4;
-            min-height: 100vh;
             color: #111827;
         }
 
         .navbar {
+            min-height: 64px;
+            padding: 0 32px;
             background: white;
-            padding: 14px 32px;
+            border-bottom: 1px solid #e5e7eb;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+            gap: 16px;
         }
-        .logo { font-size: 20px; font-weight: 700; color: #16a34a; text-decoration: none; }
-        .nav-links { display: flex; gap: 12px; align-items: center; }
-        .nav-link { font-size: 14px; color: #374151; text-decoration: none; font-weight: 500; padding: 7px 14px; border-radius: 8px; }
-        .nav-link:hover { background: #f3f4f6; }
-        .btn-logout { padding: 8px 16px; background: #f3f4f6; color: #374151; border-radius: 8px; font-size: 13px; font-weight: 500; text-decoration: none; }
 
-        .page-container {
-            max-width: 1100px;
+        .logo {
+            color: #15803d;
+            font-size: 24px;
+            font-weight: 700;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .nav-link,
+        .logout-link {
+            color: #4b5563;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 9px 14px;
+            border-radius: 10px;
+        }
+
+            .nav-link:hover,
+            .logout-link:hover {
+                background: #f3f4f6;
+                color: #111827;
+            }
+
+        .logout-link {
+            background: #f3f4f6;
+        }
+
+        .page {
+            max-width: 1080px;
             margin: 32px auto;
-            padding: 0 24px;
+            padding: 0 20px;
             display: grid;
             grid-template-columns: 320px 1fr;
             gap: 24px;
-            align-items: start;
         }
 
-        /* ============ CHARACTER CARD ============ */
-        .character-card {
+        .card {
             background: white;
-            border-radius: 24px;
-            padding: 28px 20px;
-            box-shadow: 0 4px 25px rgba(0,0,0,0.05);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
+            border: 1px solid #e5e7eb;
+            border-radius: 18px;
+            padding: 24px;
+        }
+
+        .sidebar {
+            height: fit-content;
             position: sticky;
             top: 24px;
+            text-align: center;
         }
 
-        .char-name { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
-        .char-level-badge {
-            font-size: 12px; font-weight: 600; color: #16a34a;
-            background: #dcfce7; padding: 4px 12px; border-radius: 100px; margin-bottom: 20px;
+        .avatar-stage {
+            width: 190px;
+            height: 190px;
+            margin: 0 auto 16px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 50% 25%, #ffffff 0 18%, transparent 19%), linear-gradient(180deg, #dcfce7, #bbf7d0);
+            border: 1px solid #bbf7d0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.2s ease;
         }
 
-        .char-figure-wrapper {
-            width: 180px; height: 220px;
-            position: relative; margin: 0 auto 20px;
-            animation: float 3.5s ease-in-out infinite;
-        }
-
-        @@keyframes float {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
-
-        .char-svg { width: 100%; height: 100%; }
-
-        @if (level >= 4) {
-            <text>
-            .star-group { animation: pulse-star 1.8s ease-in-out infinite; transform-origin: center; }
-            @@keyframes pulse-star {
-                0%, 100% { transform: scale(1); opacity: 1; }
-                50% { transform: scale(1.1); opacity: 0.9; }
+            .avatar-stage:hover {
+                transform: translateY(-3px) scale(1.02);
             }
-            </text>
-        }
 
-        @if (level == 5) {
-            <text>
-            .char-svg { animation: glow-pulse 2s ease-in-out infinite; }
-            @@keyframes glow-pulse {
-                0%, 100% { filter: drop-shadow(0 0 10px rgba(250,204,21,0.4)); }
-                50% { filter: drop-shadow(0 0 25px rgba(250,204,21,0.8)); }
+            .avatar-stage.avatar-bounce .buddy {
+                animation: buddyBounce 0.55s ease;
             }
-            </text>
+
+        .buddy {
+            width: 128px;
+            height: 150px;
+            position: relative;
+            transform-origin: center bottom;
+            animation: buddyFloat 3s ease-in-out infinite;
         }
 
-        /* PROGRESS BAR */
-        .level-progress { width: 100%; margin-bottom: 20px; }
-        .level-progress-header { display: flex; justify-content: space-between; font-size: 12px; color: #9ca3af; margin-bottom: 6px; }
-        .progress-track { width: 100%; height: 8px; background: #f3f4f6; border-radius: 10px; overflow: hidden; }
-        .progress-fill { height: 100%; background: linear-gradient(90deg, #facc15, #f59e0b); border-radius: 10px; transition: width 1s ease-in-out; }
-
-        /* STATS MINI */
-        .stats-mini { display: flex; gap: 8px; width: 100%; margin-bottom: 20px; }
-        .stat-mini { flex: 1; background: #f9fafb; border-radius: 14px; padding: 12px 4px; }
-        .stat-mini-val { font-size: 18px; font-weight: 700; display: block; }
-        .stat-mini-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; }
-
-        /* LEVEL LIST */
-        .level-list { width: 100%; text-align: left; }
-        .level-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; margin-bottom: 4px; border: 1px solid transparent; }
-        .level-item.current { background: #f0fdf4; border-color: #bbf7d0; }
-        .level-item.done { opacity: 0.6; }
-        .level-text { flex: 1; }
-        .level-title { font-size: 13px; font-weight: 600; }
-        .level-req { font-size: 11px; color: #9ca3af; }
-        .level-tag { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 8px; }
-        .tag-current { background: #dcfce7; color: #16a34a; }
-        .tag-done { background: #fef9c3; color: #ca8a04; }
-        .tag-locked { background: #f3f4f6; color: #9ca3af; }
-
-        /* ============ RIGHT COLUMN ============ */
-        .right-col { display: flex; flex-direction: column; gap: 20px; }
-        .card { background: white; border-radius: 20px; padding: 24px; box-shadow: 0 2px 12px rgba(0,0,0,0.04); }
-        .card-title { font-size: 16px; font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 8px; }
-
-        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f3f4f6; }
-        .info-row:last-child { border-bottom: none; }
-        .info-label { color: #9ca3af; font-size: 14px; }
-        .info-value { font-weight: 500; font-size: 14px; }
-
-        /* FORM STYLES */
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .form-group { display: flex; flex-direction: column; gap: 6px; }
-        .form-full { grid-column: 1 / -1; }
-        .form-label { font-size: 12px; font-weight: 700; color: #4b5563; }
-        .form-input { 
-            padding: 12px; border: 1.5px solid #e5e7eb; border-radius: 10px; 
-            font-size: 14px; transition: all 0.2s; background: #f9fafb;
+        .buddy-head {
+            width: 76px;
+            height: 76px;
+            background: #fde68a;
+            border: 3px solid #92400e;
+            border-radius: 50%;
+            position: absolute;
+            top: 4px;
+            left: 26px;
+            z-index: 3;
         }
-        .form-input:focus { outline: none; border-color: #16a34a; background: white; box-shadow: 0 0 0 3px rgba(22,163,74,0.1); }
-        
-        .btn-save { 
-            background: #16a34a; color: white; border: none; padding: 12px 24px; 
-            border-radius: 10px; font-weight: 600; cursor: pointer; transition: 0.2s;
+
+        .buddy-hair {
+            width: 58px;
+            height: 28px;
+            background: #78350f;
+            border-radius: 34px 34px 14px 14px;
+            position: absolute;
+            top: -5px;
+            left: 8px;
         }
-        .btn-save:hover { background: #15803d; transform: translateY(-1px); }
 
-        /* ACHIEVEMENTS */
-        .achievements-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
-        .achievement { 
-            padding: 16px; border-radius: 16px; text-align: center; 
-            background: #f9fafb; border: 1.5px solid #f3f4f6; transition: 0.3s;
+        .buddy-ear {
+            width: 14px;
+            height: 20px;
+            background: #fde68a;
+            border: 3px solid #92400e;
+            border-radius: 50%;
+            position: absolute;
+            top: 27px;
+            z-index: 1;
         }
-        .achievement.unlocked { background: #f0fdf4; border-color: #bbf7d0; }
-        .achievement-icon { font-size: 32px; margin-bottom: 8px; display: block; }
-        .achievement-name { font-size: 12px; font-weight: 700; margin-bottom: 4px; }
-        .achievement-desc { font-size: 10px; color: #9ca3af; line-height: 1.3; }
-        .achievement.locked { opacity: 0.7; }
-        .achievement.locked .achievement-icon { filter: grayscale(1); opacity: 0.4; }
 
-        /* GOAL BOX */
-        .goal-box { display: flex; gap: 16px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 16px; padding: 20px; }
-        .goal-icon-big { font-size: 32px; }
-        .goal-name-text { font-size: 16px; font-weight: 700; color: #15803d; }
-        .goal-time-text { font-size: 13px; color: #6b7280; margin-top: 4px; }
+            .buddy-ear.left {
+                left: 17px;
+            }
 
-        .toast { padding: 12px 16px; border-radius: 12px; margin-bottom: 16px; font-size: 14px; font-weight: 500; }
-        .toast-success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+            .buddy-ear.right {
+                right: 17px;
+            }
+
+        .buddy-eye {
+            width: 8px;
+            height: 8px;
+            background: #111827;
+            border-radius: 50%;
+            position: absolute;
+            top: 35px;
+            animation: blink 4s infinite;
+        }
+
+            .buddy-eye.left {
+                left: 23px;
+            }
+
+            .buddy-eye.right {
+                right: 23px;
+            }
+
+        .buddy-smile {
+            width: 26px;
+            height: 13px;
+            border-bottom: 3px solid #92400e;
+            border-radius: 0 0 30px 30px;
+            position: absolute;
+            left: 22px;
+            top: 48px;
+        }
+
+        .buddy-body {
+            width: 72px;
+            height: 70px;
+            background: #22c55e;
+            border: 3px solid #166534;
+            border-radius: 28px 28px 20px 20px;
+            position: absolute;
+            left: 28px;
+            top: 74px;
+            z-index: 2;
+        }
+
+        .buddy-shirt-dot {
+            width: 8px;
+            height: 8px;
+            background: #dcfce7;
+            border-radius: 50%;
+            position: absolute;
+            left: 31px;
+            top: 20px;
+            box-shadow: 0 18px 0 #dcfce7;
+        }
+
+        .buddy-arm {
+            width: 18px;
+            height: 58px;
+            background: #fde68a;
+            border: 3px solid #92400e;
+            border-radius: 999px;
+            position: absolute;
+            top: 82px;
+            z-index: 1;
+            transform-origin: top center;
+        }
+
+            .buddy-arm.left {
+                left: 10px;
+                transform: rotate(18deg);
+            }
+
+            .buddy-arm.right {
+                right: 10px;
+                transform: rotate(-22deg);
+                animation: wave 1.8s ease-in-out infinite;
+            }
+
+        .buddy-leg {
+            width: 18px;
+            height: 34px;
+            background: #14532d;
+            border-radius: 999px;
+            position: absolute;
+            top: 134px;
+            z-index: 1;
+        }
+
+            .buddy-leg.left {
+                left: 43px;
+                transform: rotate(5deg);
+            }
+
+            .buddy-leg.right {
+                right: 43px;
+                transform: rotate(-5deg);
+            }
+
+        .avatar-spark {
+            position: absolute;
+            font-size: 22px;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+            .avatar-spark.one {
+                top: 24px;
+                right: 34px;
+            }
+
+            .avatar-spark.two {
+                bottom: 34px;
+                left: 34px;
+            }
+
+        .avatar-stage.avatar-bounce .avatar-spark.one {
+            animation: sparkPop 0.7s ease;
+        }
+
+        .avatar-stage.avatar-bounce .avatar-spark.two {
+            animation: sparkPop 0.7s ease 0.08s;
+        }
+
+        .avatar-speech {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            border-radius: 14px;
+            padding: 12px 14px;
+            font-size: 14px;
+            line-height: 1.45;
+            text-align: left;
+            margin: 0 0 14px;
+            position: relative;
+        }
+
+            .avatar-speech::before {
+                content: "";
+                position: absolute;
+                top: -7px;
+                left: 50%;
+                width: 12px;
+                height: 12px;
+                background: #fff7ed;
+                border-left: 1px solid #fed7aa;
+                border-top: 1px solid #fed7aa;
+                transform: translateX(-50%) rotate(45deg);
+            }
+
+        .avatar-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .avatar-mini-btn {
+            border: 1px solid #bbf7d0;
+            background: #f0fdf4;
+            color: #166534;
+            padding: 9px 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+            .avatar-mini-btn:hover {
+                background: #dcfce7;
+            }
+
+        .name {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .email {
+            color: #6b7280;
+            font-size: 14px;
+            word-break: break-word;
+            margin-bottom: 18px;
+        }
+
+        .profile-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #dcfce7;
+            color: #15803d;
+            padding: 8px 15px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        .quote-box {
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            color: #166534;
+            border-radius: 14px;
+            padding: 16px;
+            text-align: left;
+            margin-bottom: 14px;
+        }
+
+        .quote-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .quote-text {
+            font-size: 15px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+
+        .quote-button {
+            border: none;
+            background: #22c55e;
+            color: white;
+            padding: 9px 13px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+            .quote-button:hover {
+                background: #15803d;
+            }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 18px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 13px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+            .info-row:last-child {
+                border-bottom: none;
+            }
+
+        .info-label {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .info-value {
+            font-weight: 600;
+            text-align: right;
+            word-break: break-word;
+        }
+
+        .form-grid {
+            display: grid;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        label {
+            color: #4b5563;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1px solid #d1d5db;
+            border-radius: 12px;
+            font-size: 14px;
+            background: #f9fafb;
+        }
+
+            input:focus {
+                outline: none;
+                border-color: #22c55e;
+                background: white;
+            }
+
+        .button {
+            border: none;
+            background: #22c55e;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+            .button:hover {
+                background: #15803d;
+            }
+
+        .toast {
+            padding: 13px 16px;
+            border-radius: 12px;
+            font-size: 14px;
+        }
+
+        .toast-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
+        }
+
+        .toast-error {
+            background: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .balance-card {
+            padding: 32px;
+        }
+
+        .balance-title {
+            margin-bottom: 34px;
+        }
+
+        .balance-clean-layout {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 42px;
+            align-items: center;
+        }
+
+        .balance-clean-wheel {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .balance-clean-svg {
+            width: 260px;
+            height: 260px;
+            overflow: visible;
+        }
+
+        .balance-summary {
+            display: grid;
+        }
+
+        .balance-summary-row {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 24px;
+            align-items: center;
+            min-height: 54px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 18px;
+        }
+
+            .balance-summary-row:last-child {
+                border-bottom: none;
+            }
+
+            .balance-summary-row span {
+                color: #9ca3af;
+            }
+
+            .balance-summary-row strong {
+                color: #111827;
+                font-weight: 700;
+                text-align: right;
+            }
+
+        .goal-box {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 18px;
+        }
+
+        .goal-icon {
+            font-size: 34px;
+        }
+
+        .goal-name {
+            color: #166534;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .goal-time {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 32px 16px;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .empty-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .empty-text {
+            color: #6b7280;
+            margin-bottom: 18px;
+            line-height: 1.5;
+        }
+
+        .danger-card {
+            border-color: #fecaca;
+            background: #fffafa;
+        }
+
+        .danger-title {
+            color: #b91c1c;
+        }
+
+        .danger-text {
+            color: #6b7280;
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .button-danger {
+            background: #dc2626;
+        }
+
+            .button-danger:hover {
+                background: #b91c1c;
+            }
+
+        @@keyframes buddyFloat {
+            0%, 100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        @@keyframes buddyBounce {
+            0%, 100% {
+                transform: translateY(0) scale(1);
+            }
+
+            35% {
+                transform: translateY(-12px) scale(1.04);
+            }
+
+            65% {
+                transform: translateY(3px) scale(0.98);
+            }
+        }
+
+        @@keyframes wave {
+            0%, 100% {
+                transform: rotate(-22deg);
+            }
+
+            50% {
+                transform: rotate(-55deg);
+            }
+        }
+
+        @@keyframes blink {
+            0%, 92%, 100% {
+                transform: scaleY(1);
+            }
+
+            95% {
+                transform: scaleY(0.12);
+            }
+        }
+
+        @@keyframes sparkPop {
+            0% {
+                opacity: 0;
+                transform: scale(0.5) rotate(0);
+            }
+
+            45% {
+                opacity: 1;
+                transform: scale(1.25) rotate(12deg);
+            }
+
+            100% {
+                opacity: 0;
+                transform: scale(0.8) rotate(-8deg);
+            }
+        }
+
+        @@media (max-width: 860px) {
+            .page {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+            }
+
+            .balance-clean-layout {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .balance-summary-row {
+                font-size: 15px;
+            }
+        }
+
+        @@media (max-width: 560px) {
+            .navbar {
+                padding: 16px;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .info-row {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .info-value {
+                text-align: left;
+            }
+
+            .balance-clean-svg {
+                width: 240px;
+                height: 240px;
+            }
+
+            .balance-summary-row {
+                grid-template-columns: 1fr;
+                gap: 4px;
+            }
+
+                .balance-summary-row strong {
+                    text-align: left;
+                }
+        }
     </style>
 </head>
+
 <body>
+    <nav class="navbar">
+        <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
 
-<nav class="navbar">
-    <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
-    <div class="nav-links">
-        <a asp-controller="Dashboard" asp-action="Index" class="nav-link">🏠 Дашборд</a>
-        <a asp-controller="Habit" asp-action="Index" class="nav-link">📋 Мої звички</a>
-        <a asp-controller="Auth" asp-action="Logout" class="btn-logout">Вийти</a>
-    </div>
-</nav>
-
-<div class="page-container">
-    <aside class="character-card">
-        <div class="char-name">@Model.User.Name</div>
-        <div class="char-level-badge">@Model.StarLevelName</div>
-
-        <div class="char-figure-wrapper">
-            <svg class="char-svg" viewBox="0 0 180 220">
-                <defs>
-                    <radialGradient id="bodyFrost" cx="35%" cy="30%" r="70%">
-                        <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9"/>
-                        <stop offset="100%" stop-color="#a7f3d0" stop-opacity="0.6"/>
-                    </radialGradient>
-                    <filter id="starGlowFilter">
-                        <feGaussianBlur stdDeviation="@(level + 1)" result="glow"/>
-                        <feMerge><feMergeNode in="glow"/><feMergeNode in="SourceGraphic"/></feMerge>
-                    </filter>
-                </defs>
-
-                <ellipse cx="90" cy="140" rx="45" ry="55" fill="url(#bodyFrost)" stroke="#6ee7b7" stroke-width="1.5" />
-                <ellipse cx="90" cy="70" rx="42" ry="46" fill="url(#bodyFrost)" stroke="#6ee7b7" stroke-width="1.5" />
-                
-                <circle cx="75" cy="68" r="6" fill="#1c1917" />
-                <circle cx="105" cy="68" r="6" fill="#1c1917" />
-                <path d="M 78 88 Q 90 98 102 88" stroke="#1c1917" stroke-width="2.5" fill="none" stroke-linecap="round"/>
-
-                <circle cx="90" cy="145" r="@(15 + level * 6)" fill="@glowColor" opacity="@glowOpacity.ToString("F2", System.Globalization.CultureInfo.InvariantCulture)"/>
-
-                <g class="star-group" filter="url(#starGlowFilter)">
-                    @{ var sz = 18 + (level - 1) * 8; }
-                    <polygon points="@GetStarPoints(90, 145, sz)" fill="#facc15" stroke="#f59e0b" stroke-width="1"/>
-                </g>
-            </svg>
+        <div class="nav-links">
+            <a asp-controller="Dashboard" asp-action="Index" class="nav-link">Дашборд</a>
+            <a asp-controller="Habit" asp-action="Index" class="nav-link">Звички</a>
+            <a asp-controller="Auth" asp-action="Logout" class="logout-link">Вийти</a>
         </div>
+    </nav>
 
-        @if (level < 5) {
-            <div class="level-progress">
-                <div class="level-progress-header">
-                    <span>До рівня @(level + 1)</span>
-                    <span>@count / @Model.NextLevelAt</span>
+    <div class="page">
+        <aside class="card sidebar">
+            <div class="avatar-stage" id="avatarStage" onclick="cheerAvatar()">
+                <div class="buddy">
+                    <div class="buddy-ear left"></div>
+                    <div class="buddy-ear right"></div>
+
+                    <div class="buddy-head">
+                        <div class="buddy-hair"></div>
+                        <div class="buddy-eye left"></div>
+                        <div class="buddy-eye right"></div>
+                        <div class="buddy-smile"></div>
+                    </div>
+
+                    <div class="buddy-arm left"></div>
+                    <div class="buddy-arm right"></div>
+
+                    <div class="buddy-body">
+                        <div class="buddy-shirt-dot"></div>
+                    </div>
+
+                    <div class="buddy-leg left"></div>
+                    <div class="buddy-leg right"></div>
                 </div>
-                <div class="progress-track">
-                    <div class="progress-fill" style="width: @Model.ProgressPercent.ToString("F0", System.Globalization.CultureInfo.InvariantCulture)%"></div>
-                </div>
+
+                <span class="avatar-spark one">✨</span>
+                <span class="avatar-spark two">🌿</span>
             </div>
-        } else {
-            <div class="char-level-badge" style="background:#fef9c3; color:#ca8a04">🏆 Максимальний рівень</div>
+
+            <div class="avatar-speech" id="avatarSpeech">
+                Привіт. Я твій маленький помічник у HabitFlow.
+            </div>
+
+            <div class="avatar-actions">
+                <button type="button" class="avatar-mini-btn" onclick="setAvatarMood('calm')">Спокій</button>
+                <button type="button" class="avatar-mini-btn" onclick="setAvatarMood('power')">Заряд</button>
+            </div>
+
+            <div class="name">@Model.User.Name</div>
+            <div class="email">@Model.User.Email</div>
+
+            <div class="profile-badge">✨ Твій простір розвитку</div>
+
+            <div class="quote-box">
+                <div class="quote-label">Мотивація</div>
+                <div class="quote-text" id="quoteText">
+                    Маленький крок сьогодні може стати великим результатом завтра.
+                </div>
+                <button type="button" class="quote-button" onclick="nextQuote()">Нова цитата</button>
+            </div>
+
+            @if (Model.CoachHabitId.HasValue)
+            {
+                <a href="/Coach/Session/@Model.CoachHabitId.Value" class="button" style="width:100%;">
+                    🤖 Відкрити AI-агента
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Habit" asp-action="Index" class="button" style="width:100%;">
+                    ➕ Створити звичку для AI-агента
+                </a>
+            }
+        </aside>
+
+        <main class="content">
+            @if (TempData["Success"] != null)
+            {
+                <div class="toast toast-success">@TempData["Success"]</div>
+            }
+
+            @if (TempData["Error"] != null)
+            {
+                <div class="toast toast-error">@TempData["Error"]</div>
+            }
+
+            <section class="card">
+                <div class="title">Мій акаунт</div>
+
+                <div class="info-row">
+                    <span class="info-label">Email</span>
+                    <span class="info-value">@Model.User.Email</span>
+                </div>
+
+                <div class="info-row">
+                    <span class="info-label">Дата реєстрації</span>
+                    <span class="info-value">@Model.User.CreatedAt.ToString("dd.MM.yyyy")</span>
+                </div>
+            </section>
+
+            <section class="card">
+                <div class="title">Редагувати профіль</div>
+
+                <form asp-controller="Profile" asp-action="EditProfile" method="post" class="form-grid">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="TimeZone" value="@timeZone" />
+
+                    <div class="form-group">
+                        <label for="Name">Ім'я</label>
+                        <input id="Name" type="text" name="Name" value="@Model.User.Name" required />
+                    </div>
+
+                    <div>
+                        <button type="submit" class="button">Зберегти</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="card">
+                <div class="title">Змінити пароль</div>
+
+                <form asp-controller="Profile" asp-action="ChangePassword" method="post" class="form-grid">
+                    @Html.AntiForgeryToken()
+
+                    <div class="form-group">
+                        <label for="CurrentPassword">Поточний пароль</label>
+                        <input id="CurrentPassword" type="password" name="CurrentPassword" required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="NewPassword">Новий пароль</label>
+                        <input id="NewPassword" type="password" name="NewPassword" required minlength="6" />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ConfirmPassword">Підтвердіть пароль</label>
+                        <input id="ConfirmPassword" type="password" name="ConfirmPassword" required minlength="6" />
+                    </div>
+
+                    <div>
+                        <button type="submit" class="button">Змінити пароль</button>
+                    </div>
+                </form>
+            </section>
+
+            @if (Model.BalanceWheel != null)
+            {
+                <section class="card balance-card">
+                    <div class="title balance-title">🧭 Моє колесо балансу</div>
+
+                    <div class="balance-clean-layout">
+                        <div class="balance-clean-wheel">
+                            <svg viewBox="0 0 340 340" class="balance-clean-svg">
+                                <circle cx="170" cy="170" r="24" fill="none" stroke="#dcfce7" stroke-width="1" />
+                                <circle cx="170" cy="170" r="48" fill="none" stroke="#dcfce7" stroke-width="1" />
+                                <circle cx="170" cy="170" r="72" fill="none" stroke="#dcfce7" stroke-width="1" />
+                                <circle cx="170" cy="170" r="96" fill="none" stroke="#dcfce7" stroke-width="1" />
+                                <circle cx="170" cy="170" r="120" fill="none" stroke="#dcfce7" stroke-width="1" />
+
+                                <line x1="170" y1="170" x2="170" y2="50" stroke="#dcfce7" stroke-width="1" />
+                                <line x1="170" y1="170" x2="254.9" y2="85.1" stroke="#dcfce7" stroke-width="1" />
+                                <line x1="170" y1="170" x2="290" y2="170" stroke="#dcfce7" stroke-width="1" />
+                                <line x1="170" y1="170" x2="254.9" y2="254.9" stroke="#dcfce7" stroke-width="1" />
+                                <line x1="170" y1="170" x2="170" y2="290" stroke="#dcfce7" stroke-width="1" />
+                                <line x1="170" y1="170" x2="85.1" y2="254.9" stroke="#dcfce7" stroke-width="1" />
+                                <line x1="170" y1="170" x2="50" y2="170" stroke="#dcfce7" stroke-width="1" />
+                                <line x1="170" y1="170" x2="85.1" y2="85.1" stroke="#dcfce7" stroke-width="1" />
+
+                                <polygon points="@wheelPolygonPoints"
+                                         fill="rgba(22, 163, 74, 0.28)"
+                                         stroke="#16a34a"
+                                         stroke-width="5"
+                                         stroke-linejoin="round" />
+
+                                <circle cx="170" cy="170" r="10" fill="#16a34a" />
+                            </svg>
+                        </div>
+
+                        <div class="balance-summary">
+                            <div class="balance-summary-row">
+                                <span>Середній баланс</span>
+                                <strong>@Model.BalanceAverage.ToString("F1") / 10</strong>
+                            </div>
+
+                            <div class="balance-summary-row">
+                                <span>Найсильніша сфера</span>
+                                <strong>@Model.StrongestBalanceArea</strong>
+                            </div>
+
+                            <div class="balance-summary-row">
+                                <span>Потребує уваги</span>
+                                <strong>@Model.WeakestBalanceArea</strong>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            }
+
+            <section class="card">
+                <div class="title">Моя ціль</div>
+
+                @if (Model.User.IsOnboardingCompleted)
+                {
+                    <div class="goal-box">
+                        <div class="goal-icon">🚀</div>
+
+                        <div>
+                            <div class="goal-name">@Model.User.OnboardingGoal</div>
+                            <div class="goal-time">@Model.User.OnboardingTime</div>
+                        </div>
+                    </div>
+
+                    <form asp-controller="Profile" asp-action="UpdateGoal" method="post" class="form-grid">
+                        @Html.AntiForgeryToken()
+
+                        <input type="hidden" name="Description" value="@Model.User.OnboardingDescription" />
+
+                        <div class="form-group">
+                            <label for="Goal">Нова ціль</label>
+                            <input id="Goal"
+                                   type="text"
+                                   name="Goal"
+                                   value="@Model.User.OnboardingGoal"
+                                   required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="AvailableTime">Коли або скільки часу готовий приділяти?</label>
+                            <input id="AvailableTime"
+                                   type="text"
+                                   name="AvailableTime"
+                                   value="@Model.User.OnboardingTime"
+                                   placeholder="Наприклад: 20 хвилин щодня ввечері" />
+                        </div>
+
+                        <div>
+                            <button type="submit" class="button">Оновити ціль</button>
+                        </div>
+                    </form>
+                }
+                else
+                {
+                    <div class="empty">
+                        <div class="empty-icon">🎯</div>
+                        <div class="empty-title">Ціль ще не встановлена</div>
+                        <div class="empty-text">
+                            Встанови свою першу ціль і рухайся до неї у власному темпі.
+                        </div>
+
+                        <a asp-controller="Onboarding" asp-action="Index" class="button">Встановити ціль</a>
+                    </div>
+                }
+            </section>
+
+            <section class="card danger-card">
+                <div class="title danger-title">Видалити профіль</div>
+
+                <div class="danger-text">
+                    Це назавжди видалить твій акаунт. Для підтвердження введи пароль.
+                </div>
+
+                <form asp-controller="Profile"
+                      asp-action="DeleteProfile"
+                      method="post"
+                      class="form-grid"
+                      onsubmit="return confirm('Точно видалити профіль? Цю дію не можна скасувати.');">
+                    @Html.AntiForgeryToken()
+
+                    <div class="form-group">
+                        <label for="DeletePassword">Пароль</label>
+                        <input id="DeletePassword"
+                               type="password"
+                               name="Password"
+                               required />
+                    </div>
+
+                    <div>
+                        <button type="submit" class="button button-danger">
+                            Видалити профіль
+                        </button>
+                    </div>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        var avatarPhrases = {
+            default: [
+                "Привіт. Я твій маленький помічник у HabitFlow.",
+                "Натискай, я махаю не просто так.",
+                "Сьогодні не треба геройства. Треба один чесний крок.",
+                "Я слідкую за настроєм профілю. Поки що все симпатично."
+            ],
+            calm: [
+                "Спокійний режим увімкнено. Дихаємо і рухаємось.",
+                "Без паніки. Маленький крок теж крок.",
+                "Сьогодні можна м’яко, але чесно.",
+                "Тихий прогрес теж рахується."
+            ],
+            power: [
+                "Режим заряду. Пішли робити красиво.",
+                "Один крок. Потім ще один. Так і будується сила.",
+                "Не ідеально — нормально. Не зупинятись — краще.",
+                "Сьогодні хороший день, щоб не зливати себе."
+            ]
+        };
+
+        var currentAvatarMood = "default";
+        var avatarPhraseIndex = 0;
+
+        function showAvatarPhrase(text) {
+            var speech = document.getElementById("avatarSpeech");
+
+            if (speech) {
+                speech.textContent = text;
+            }
         }
 
-        <div class="stats-mini">
-            <div class="stat-mini"><span class="stat-mini-val">@count</span><span class="stat-mini-label">Виконано</span></div>
-            <div class="stat-mini"><span class="stat-mini-val">@Model.TotalHabits</span><span class="stat-mini-label">Звичок</span></div>
-            <div class="stat-mini"><span class="stat-mini-val">@level</span><span class="stat-mini-label">Рівень</span></div>
-        </div>
+        function cheerAvatar() {
+            var stage = document.getElementById("avatarStage");
+            var list = avatarPhrases[currentAvatarMood] || avatarPhrases.default;
 
-        <div class="level-list">
-            @{
-                var levels = new[] { ("✨", "Початківець", "0-5"), ("🌟", "На шляху", "6-20"), ("💫", "Зростаєш", "21-50"), ("⭐", "Майстер", "51-100"), ("🌠", "Легенда", "100+") };
-                for (int i = 0; i < levels.Length; i++) {
-                    var lvl = i + 1;
-                    <div class="level-item @(lvl == level ? "current" : lvl < level ? "done" : "")">
-                        <span>@levels[i].Item1</span>
-                        <div class="level-text">
-                            <div class="level-title">@levels[i].Item2</div>
-                            <div class="level-req">@levels[i].Item3</div>
-                        </div>
-                        <span class="level-tag @(lvl == level ? "tag-current" : lvl < level ? "tag-done" : "tag-locked")">
-                            @(lvl == level ? "Зараз" : lvl < level ? "✓" : "🔒")
-                        </span>
-                    </div>
-                }
+            avatarPhraseIndex = (avatarPhraseIndex + 1) % list.length;
+            showAvatarPhrase(list[avatarPhraseIndex]);
+
+            if (stage) {
+                stage.classList.remove("avatar-bounce");
+                void stage.offsetWidth;
+                stage.classList.add("avatar-bounce");
             }
-        </div>
-    </aside>
+        }
 
-    <main class="right-col">
-        @if (TempData["Success"] != null) { <div class="toast toast-success">@TempData["Success"]</div> }
+        function setAvatarMood(mood) {
+            currentAvatarMood = mood;
+            avatarPhraseIndex = 0;
 
-        <section class="card">
-            <div class="card-title">👤 Мій Акаунт</div>
-            <div class="info-row"><span class="info-label">Email</span><span class="info-value">@Model.User.Email</span></div>
-            <div class="info-row"><span class="info-label">Дата реєстрації</span><span class="info-value">@Model.User.CreatedAt.ToString("dd.MM.yyyy")</span></div>
-            <div class="info-row"><span class="info-label">Часовий пояс</span><span class="info-value">@Model.User.TimeZone</span></div>
-        </section>
+            var list = avatarPhrases[currentAvatarMood] || avatarPhrases.default;
+            showAvatarPhrase(list[0]);
+            cheerAvatar();
+        }
 
-        <section class="card">
-            <div class="card-title">✏️ Редагувати профіль</div>
-            <form asp-controller="Profile" asp-action="EditProfile" method="post" class="form-grid">
-                <div class="form-group form-full">
-                    <label class="form-label">Ім'я</label>
-                    <input class="form-input" type="text" name="Name" value="@Model.User.Name" required />
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Часовий пояс</label>
-                    <select class="form-input" name="TimeZone">
-                        <option value="UTC+2">Київ (UTC+2)</option>
-                        <option value="UTC">UTC</option>
-                    </select>
-                </div>
-                <div class="form-group" style="flex-direction:row; align-items:center; padding-top:25px">
-                    <input type="checkbox" name="NotificationsEnabled" value="true" @(Model.User.NotificationsEnabled ? "checked" : "") style="width:18px; height:18px; accent-color:#16a34a"/>
-                    <label style="margin-left:8px; font-size:14px">Сповіщення</label>
-                </div>
-                <div class="form-full">
-                    <button type="submit" class="btn-save">Оновити профіль</button>
-                </div>
-            </form>
-        </section>
+        var quotes = [
+            "Маленький крок сьогодні може стати великим результатом завтра.",
+            "Не потрібно бути ідеальним. Достатньо не здаватися.",
+            "Ти вже ближче до мети, ніж був учора.",
+            "Сила росте тоді, коли ти продовжуєш рухатися.",
+            "Навіть повільний прогрес — це все ще прогрес.",
+            "Твій темп має значення тільки для тебе. Рухайся спокійно.",
+            "Кожен день — це шанс обрати себе ще раз."
+        ];
 
+        var quoteIndex = 0;
 
-        <section class="card">
-            <div class="card-title">🏆 Досягнення</div>
-            <div class="achievements-grid">
-                @foreach (var a in Model.Achievements) {
-                    <div class="achievement @(a.IsUnlocked ? "unlocked" : "locked")">
-                        <span class="achievement-icon">@a.Icon</span>
-                        <div class="achievement-name">@a.Name</div>
-                        <div class="achievement-desc">@a.Description</div>
-                    </div>
-                }
-            </div>
-        </section>
+        function nextQuote() {
+            quoteIndex = (quoteIndex + 1) % quotes.length;
+            document.getElementById("quoteText").textContent = quotes[quoteIndex];
+        }
 
-        @if (Model.BalanceWheel != null)
-{
-    <section class="card">
-        <div class="card-title">🧭 Моє колесо балансу</div>
-
-        <div style="display:grid; grid-template-columns: 260px 1fr; gap:24px; align-items:center;">
-            <svg viewBox="0 0 340 340" style="width:260px;height:260px;overflow:visible;">
-                <circle cx="170" cy="170" r="24" fill="none" stroke="#dcfce7" />
-                <circle cx="170" cy="170" r="48" fill="none" stroke="#dcfce7" />
-                <circle cx="170" cy="170" r="72" fill="none" stroke="#dcfce7" />
-                <circle cx="170" cy="170" r="96" fill="none" stroke="#dcfce7" />
-                <circle cx="170" cy="170" r="120" fill="none" stroke="#dcfce7" />
-
-                <line x1="170" y1="170" x2="170" y2="50" stroke="#bbf7d0" />
-                <line x1="170" y1="170" x2="254.9" y2="85.1" stroke="#bbf7d0" />
-                <line x1="170" y1="170" x2="290" y2="170" stroke="#bbf7d0" />
-                <line x1="170" y1="170" x2="254.9" y2="254.9" stroke="#bbf7d0" />
-                <line x1="170" y1="170" x2="170" y2="290" stroke="#bbf7d0" />
-                <line x1="170" y1="170" x2="85.1" y2="254.9" stroke="#bbf7d0" />
-                <line x1="170" y1="170" x2="50" y2="170" stroke="#bbf7d0" />
-                <line x1="170" y1="170" x2="85.1" y2="85.1" stroke="#bbf7d0" />
-
-                @{
-                    var values = new[]
-                    {
-                        Model.BalanceWheel.Health,
-                        Model.BalanceWheel.Career,
-                        Model.BalanceWheel.Finance,
-                        Model.BalanceWheel.Relationships,
-                        Model.BalanceWheel.SelfDevelopment,
-                        Model.BalanceWheel.Rest,
-                        Model.BalanceWheel.EmotionalState,
-                        Model.BalanceWheel.Environment
-                    };
-
-                    var points = new System.Text.StringBuilder();
-
-                    for (int i = 0; i < values.Length; i++)
-                    {
-                        var angle = (-90 + i * 45) * Math.PI / 180;
-                        var radius = values[i] / 10.0 * 120;
-                        var x = 170 + radius * Math.Cos(angle);
-                        var y = 170 + radius * Math.Sin(angle);
-
-                        points.Append($"{x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)},{y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture)} ");
-                    }
-                }
-
-                <polygon points="@points.ToString()"
-                         fill="rgba(22,163,74,0.32)"
-                         stroke="#16a34a"
-                         stroke-width="4"
-                         stroke-linejoin="round" />
-
-                <circle cx="170" cy="170" r="8" fill="#16a34a" />
-            </svg>
-
-            <div>
-                <div class="info-row">
-                    <span class="info-label">Середній баланс</span>
-                    <span class="info-value">@Model.BalanceAverage.ToString("F1") / 10</span>
-                </div>
-
-                <div class="info-row">
-                    <span class="info-label">Найсильніша сфера</span>
-                    <span class="info-value">@Model.StrongestBalanceArea</span>
-                </div>
-
-                <div class="info-row">
-                    <span class="info-label">Потребує уваги</span>
-                    <span class="info-value">@Model.WeakestBalanceArea</span>
-                </div>
-            </div>
-        </div>
-    </section>
-}
-
-        <section class="card">
-            <div class="card-title">🎯 Моя ціль</div>
-            @if (Model.User.IsOnboardingCompleted) {
-                <div class="goal-box">
-                    <div class="goal-icon-big">🚀</div>
-                    <div>
-                        <div class="goal-name-text">@Model.User.OnboardingGoal</div>
-                        <div class="goal-time-text">Час: @Model.User.OnboardingTime</div>
-                    </div>
-                </div>
-            } else {
-                <div style="text-align:center; padding:20px">
-                    <p style="color:#9ca3af; margin-bottom:15px">Ціль ще не встановлена</p>
-                    <a asp-controller="Onboarding" asp-action="Index" class="btn-save" style="text-decoration:none">Встановити ціль</a>
-                </div>
-            }
-        </section>
-    </main>
-</div>
-
+        setInterval(nextQuote, 7000);
+    </script>
 </body>
 </html>

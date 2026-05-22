@@ -89,5 +89,56 @@ namespace HabitFlow.Web.Controllers
 
             return this.RedirectToAction("Index");
         }
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> UpdateGoal(OnboardingDto dto)
+        {
+            if (this.CurrentUserId == null)
+            {
+                return this.RedirectToAction("Login", "Auth");
+            }
+
+            if (string.IsNullOrWhiteSpace(dto.Goal))
+            {
+                this.TempData["Error"] = "Введи ціль.";
+                return this.RedirectToAction("Index");
+            }
+
+            await this.userService.SaveOnboardingAsync(this.CurrentUserId.Value, dto);
+
+            this.TempData["Success"] = "Ціль оновлено!";
+            return this.RedirectToAction("Index");
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> DeleteProfile(DeleteProfileDto dto)
+        {
+            if (this.CurrentUserId == null)
+            {
+                return this.RedirectToAction("Login", "Auth");
+            }
+
+            if (!this.ModelState.IsValid)
+            {
+                this.TempData["Error"] = "Введи пароль для видалення профілю.";
+                return this.RedirectToAction("Index");
+            }
+
+            var (success, error) = await this.userService.DeleteProfileAsync(
+                this.CurrentUserId.Value,
+                dto);
+
+            if (!success)
+            {
+                this.TempData["Error"] = error;
+                return this.RedirectToAction("Index");
+            }
+
+            this.HttpContext.Session.Clear();
+            this.TempData["Success"] = "Профіль видалено.";
+
+            return this.RedirectToAction("Login", "Auth");
+        }
     }
 }

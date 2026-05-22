@@ -1,4 +1,5 @@
-﻿@Html.AntiForgeryToken()
+﻿
+@Html.AntiForgeryToken()
 @model HabitFlow.BLL.DTOs.CoachSessionResponse
 @{
     Layout = null;
@@ -697,7 +698,6 @@
 
     </div>
 
-    <!-- Модал підсумку -->
     <div class="modal-overlay" id="summaryOverlay" onclick="closeSummaryOutside(event)">
         <div class="modal">
             <button class="modal-close" onclick="closeSummary()">✕</button>
@@ -718,25 +718,24 @@
         const HABIT_ID = '@habitId';
         const SESSION_TYPE = '@((int)Model.SessionType)';
 
-        // ── Стан чату ────────────────────────────────────────────────────
+        // Стан чату
         let chatHistory = [];
         let isSending = false;
 
-        // ── Стан Gemini Live ─────────────────────────────────────────────
+        // Стан Gemini Live
         let liveWs = null;
-        let liveAudioCtx = null;   // мікрофон (16 kHz)
+        let liveAudioCtx = null;
         let liveProcessor = null;
         let liveIsActive = false;
 
-        let livePlaybackCtx = null;  // відтворення (24 kHz) — один на всю сесію
-        let liveNextStartTime = 0;    // час старту наступного чанку
-        let liveHasAudio = false; // чи вже запланований хоч один чанк
+        let livePlaybackCtx = null;
+        let liveNextStartTime = 0;
+        let liveHasAudio = false;
 
-        // Накопичення транскрипту (Gemini відправляє по шматках)
         const _transcriptBuf = { model: '', user: '' };
         const _transcriptTimer = { model: null, user: null };
 
-        // ── Утиліти UI ───────────────────────────────────────────────────
+        // Утиліти UI
         function showTtsBar(visible) {
             document.getElementById('ttsStatusBar').classList.toggle('visible', visible);
         }
@@ -751,7 +750,7 @@
             document.getElementById('noticeBar').classList.remove('visible');
         }
 
-        // ── Рендер повідомлень ───────────────────────────────────────────
+        // Рендер повідомлень
         function appendUserMsg(text) {
             const c = document.getElementById('chatMessages');
             const d = document.createElement('div');
@@ -785,10 +784,11 @@
             c.scrollTop = c.scrollHeight;
         }
 
-        // ── Початкове привітання ─────────────────────────────────────────
+        // Початкове привітання
         async function loadGreeting() {
             const loadId = 'init-loading';
             appendLoading(loadId);
+
             try {
                 const resp = await fetch('/Coach/Advice', {
                     method: 'POST',
@@ -800,24 +800,31 @@
                         history: [],
                     }),
                 });
+
                 document.getElementById(loadId)?.remove();
+
                 if (!resp.ok) throw new Error('HTTP ' + resp.status);
+
                 const data = await resp.json();
                 const greeting = data.advice || 'Привіт! Я твій агент. Як можу допомогти?';
+
                 chatHistory.push({ role: 'model', content: greeting });
                 appendAgentMsg(greeting);
             } catch {
                 document.getElementById(loadId)?.remove();
+
                 const fallback = 'Привіт! Я твій персональний агент. Розкажи, як у тебе справи з цією звичкою?';
+
                 chatHistory.push({ role: 'model', content: fallback });
                 appendAgentMsg(fallback);
             }
         }
 
-        // ── Відправка тексту ─────────────────────────────────────────────
+        // Відправка тексту
         async function sendChat() {
             const input = document.getElementById('chatInput');
             const text = input.value.trim();
+
             if (!text || isSending) return;
 
             isSending = true;
@@ -843,14 +850,19 @@
                         userMessage: text,
                     }),
                 });
+
                 document.getElementById(loadId)?.remove();
+
                 const data = await resp.json();
                 const reply = data.advice || 'Вибач, не можу відповісти зараз. Спробуй ще раз.';
+
                 chatHistory.push({ role: 'model', content: reply });
                 appendAgentMsg(reply);
             } catch {
                 document.getElementById(loadId)?.remove();
+
                 const errMsg = "Виникла помилка зв'язку. Спробуй ще раз.";
+
                 chatHistory.push({ role: 'model', content: errMsg });
                 appendAgentMsg(errMsg);
             }
@@ -861,10 +873,13 @@
         }
 
         function handleChatKey(e) {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChat();
+            }
         }
 
-        // ── Gemini Live — голосовий режим ────────────────────────────────
+        // Gemini Live
         async function toggleVoiceChat() {
             if (liveIsActive) stopLiveSession();
             else await startLiveSession();
@@ -872,17 +887,21 @@
 
         async function startLiveSession() {
             const btn = document.getElementById('btnVoiceChat');
+
             btn.textContent = '⏳';
             btn.disabled = true;
             hideNotice();
 
-            // Отримуємо userId
             let userId = '';
+
             try {
                 const resp = await fetch('/Coach/GetUserId');
                 const data = await resp.json();
+
                 userId = data.userId;
+
                 if (!userId) throw new Error('userId null');
+
                 console.log('userId:', userId);
             } catch (e) {
                 console.error('Помилка userId:', e);
@@ -892,12 +911,12 @@
                 return;
             }
 
-            // Один AudioContext для відтворення на всю сесію
             livePlaybackCtx = new AudioContext({ sampleRate: 24000 });
             liveNextStartTime = 0;
             liveHasAudio = false;
 
             const wsUrl = `ws://localhost:5153/Coach/VoiceStream/${HABIT_ID}?userId=${userId}`;
+
             console.log('URL:', wsUrl);
 
             liveWs = new WebSocket(wsUrl);
@@ -905,11 +924,14 @@
 
             liveWs.onopen = async () => {
                 console.log('✅ WebSocket ВІДКРИТО!');
+
                 liveIsActive = true;
                 btn.textContent = '⏹';
                 btn.disabled = false;
                 btn.classList.add('recording');
+
                 document.getElementById('recordingIndicator').classList.add('visible');
+
                 await startLiveMicrophone();
             };
 
@@ -917,6 +939,7 @@
                 const text = typeof e.data === 'string'
                     ? e.data
                     : new TextDecoder().decode(e.data);
+
                 handleLiveMessage(text);
             };
 
@@ -932,53 +955,57 @@
             };
         }
 
-        // ── Обробка повідомлень від Gemini ───────────────────────────────
+        // Обробка повідомлень від Gemini
         function handleLiveMessage(json) {
             let msg;
-            try { msg = JSON.parse(json); }
-            catch (e) {
+
+            try {
+                msg = JSON.parse(json);
+            } catch (e) {
                 console.warn('JSON parse error:', e.message, '| raw:', json.slice(0, 80));
                 return;
             }
 
-            // Аудіо чанки — плануємо безперервно
             const parts = msg?.serverContent?.modelTurn?.parts ?? [];
+
             for (const p of parts) {
                 if (p?.inlineData?.mimeType?.startsWith('audio/')) {
                     schedulePcmChunk(p.inlineData.data);
                 }
-                // Thinking-текст ігноруємо (не показуємо в чаті)
             }
 
-            // Транскрипт відповіді агента (приходить по шматках — збираємо)
             const outText = msg?.serverContent?.outputTranscription?.text
                 ?? msg?.serverContent?.outputAudioTranscription?.text;
+
             if (outText) accumulateTranscript('model', outText);
 
-            // Транскрипт голосу користувача
             const inText = msg?.serverContent?.inputTranscription?.text
                 ?? msg?.serverContent?.inputAudioTranscription?.text;
+
             if (inText) accumulateTranscript('user', inText);
         }
 
-        // ── Накопичення транскрипту ──────────────────────────────────────
-        // Gemini відправляє по 1–3 слова, ми чекаємо 800 мс тиші і показуємо одне повідомлення
+        // Накопичення транскрипту
         function accumulateTranscript(role, chunk) {
             _transcriptBuf[role] += chunk;
+
             clearTimeout(_transcriptTimer[role]);
+
             _transcriptTimer[role] = setTimeout(() => {
                 const text = _transcriptBuf[role].trim();
+
                 if (text) {
                     chatHistory.push({ role, content: text });
+
                     if (role === 'model') appendAgentMsg(text);
                     else appendUserMsg(text);
                 }
+
                 _transcriptBuf[role] = '';
             }, 800);
         }
 
-        // ── Ключова функція: планування аудіо без gap-ів ─────────────────
-        // Замість нових AudioContext на кожен чанк — один ctx + src.start(liveNextStartTime)
+        // Планування аудіо
         function schedulePcmChunk(b64) {
             if (!livePlaybackCtx) return;
 
@@ -989,10 +1016,10 @@
             buf.copyToChannel(samples, 0);
 
             const src = livePlaybackCtx.createBufferSource();
+
             src.buffer = buf;
             src.connect(livePlaybackCtx.destination);
 
-            // Перший чанк: старт через 100 мс — щоб наступні чанки встигли прийти
             if (!liveHasAudio) {
                 liveNextStartTime = livePlaybackCtx.currentTime + 0.1;
                 liveHasAudio = true;
@@ -1000,9 +1027,8 @@
             }
 
             src.start(liveNextStartTime);
-            liveNextStartTime += duration; // наступний чанк одразу після — нуль gap
+            liveNextStartTime += duration;
 
-            // Ховаємо індикатор коли черга вичерпана
             src.onended = () => {
                 if (livePlaybackCtx && liveNextStartTime <= livePlaybackCtx.currentTime + 0.05) {
                     showTtsBar(false);
@@ -1011,26 +1037,31 @@
             };
         }
 
-        // ── Зупинити аудіо (кнопка ⏹ в індикаторі) ──────────────────────
+        // Зупинка аудіо
         function stopLiveAudio() {
             if (livePlaybackCtx) {
                 livePlaybackCtx.close().catch(() => { });
                 livePlaybackCtx = null;
             }
+
             liveNextStartTime = 0;
             liveHasAudio = false;
+
             showTtsBar(false);
         }
 
-        // ── Мікрофон через AudioWorklet ──────────────────────────────────
+        // Мікрофон
         async function startLiveMicrophone() {
             try {
                 liveAudioCtx = new AudioContext({ sampleRate: 16000 });
+
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
                 const source = liveAudioCtx.createMediaStreamSource(stream);
 
                 console.log('Запит на мікрофон...');
+
                 await liveAudioCtx.audioWorklet.addModule('/js/pcm-processor.js');
+
                 liveProcessor = new AudioWorkletNode(liveAudioCtx, 'pcm-processor');
 
                 liveProcessor.port.onmessage = ({ data }) => {
@@ -1048,6 +1079,7 @@
 
                 source.connect(liveProcessor);
                 liveProcessor.connect(liveAudioCtx.destination);
+
                 console.log('✅ Мікрофон підключено');
             } catch (e) {
                 console.error('startLiveMicrophone помилка:', e);
@@ -1055,65 +1087,79 @@
             }
         }
 
-        // ── Зупинити всю сесію ───────────────────────────────────────────
+        // Зупинка сесії
         function stopLiveSession() {
             liveIsActive = false;
 
-            // Скидаємо таймери транскрипту
             clearTimeout(_transcriptTimer.model);
             clearTimeout(_transcriptTimer.user);
+
             _transcriptBuf.model = '';
             _transcriptBuf.user = '';
 
-            // Мікрофон
             liveProcessor?.disconnect();
             liveAudioCtx?.close().catch(() => { });
+
             liveAudioCtx = null;
             liveProcessor = null;
 
-            // Відтворення
             stopLiveAudio();
 
-            // WebSocket
             if (liveWs) {
-                liveWs.onclose = null; // щоб не викликати stopLiveSession рекурсивно
+                liveWs.onclose = null;
                 liveWs.close();
                 liveWs = null;
             }
 
             const btn = document.getElementById('btnVoiceChat');
+
             btn.textContent = '🎤';
             btn.disabled = false;
             btn.classList.remove('recording');
+
             document.getElementById('recordingIndicator').classList.remove('visible');
         }
 
-        // ── PCM helpers ──────────────────────────────────────────────────
+        // PCM helpers
         function pcmBase64ToFloat32(b64) {
             const bin = atob(b64);
             const bytes = new Uint8Array(bin.length);
-            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+            for (let i = 0; i < bin.length; i++) {
+                bytes[i] = bin.charCodeAt(i);
+            }
+
             const i16 = new Int16Array(bytes.buffer);
             const f32 = new Float32Array(i16.length);
-            for (let i = 0; i < i16.length; i++) f32[i] = i16[i] / 32768;
+
+            for (let i = 0; i < i16.length; i++) {
+                f32[i] = i16[i] / 32768;
+            }
+
             return f32;
         }
 
         function arrayBufferToBase64(buf) {
             let s = '';
+
             new Uint8Array(buf).forEach(b => s += String.fromCharCode(b));
+
             return btoa(s);
         }
 
-        // ── Підсумок розмови ─────────────────────────────────────────────
+        // Підсумок розмови
         function showSummary() {
             document.getElementById('summaryDate').textContent =
                 new Date().toLocaleString('uk-UA', {
-                    day: 'numeric', month: 'long', year: 'numeric',
-                    hour: '2-digit', minute: '2-digit'
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
                 });
 
             const histEl = document.getElementById('summaryChatHistory');
+
             histEl.innerHTML = '';
 
             if (!chatHistory.length) {
@@ -1122,9 +1168,11 @@
                 chatHistory.forEach(m => {
                     const isUser = m.role === 'user';
                     const div = document.createElement('div');
+
                     div.className = 'sum-msg ' + (isUser ? 'sum-msg-user' : 'sum-msg-agent');
                     div.innerHTML = `<div class="sum-msg-role">${isUser ? '👤 Ти' : '🤖 Агент'}</div>`;
                     div.appendChild(document.createTextNode(m.content));
+
                     histEl.appendChild(div);
                 });
             }
@@ -1139,18 +1187,22 @@
         }
 
         function closeSummaryOutside(e) {
-            if (e.target === document.getElementById('summaryOverlay')) closeSummary();
+            if (e.target === document.getElementById('summaryOverlay')) {
+                closeSummary();
+            }
         }
 
-        function printSummary() { window.print(); }
+        function printSummary() {
+            window.print();
+        }
 
-        // ── Авторозмір textarea ──────────────────────────────────────────
+        // Авторозмір textarea
         document.getElementById('chatInput').addEventListener('input', function () {
             this.style.height = 'auto';
             this.style.height = Math.min(this.scrollHeight, 120) + 'px';
         });
 
-        // ── Старт ────────────────────────────────────────────────────────
+        // Старт
         loadGreeting();
     </script>
 

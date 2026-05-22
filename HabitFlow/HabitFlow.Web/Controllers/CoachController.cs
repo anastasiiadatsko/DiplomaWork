@@ -191,7 +191,6 @@ namespace HabitFlow.Web.Controllers
                 return;
             }
 
-            // Читаємо setupComplete — збираємо повне повідомлення
             try
             {
                 var fullMessage = await ReceiveFullMessageAsync(geminiWs, CancellationToken.None,
@@ -259,10 +258,6 @@ namespace HabitFlow.Web.Controllers
             }
         }
 
-        /// <summary>
-        /// Збирає всі WebSocket-фрейми до EndOfMessage і повертає повний буфер.
-        /// Повертає null якщо з'єднання закрито або стан не Open після отримання.
-        /// </summary>
         private async Task<byte[]?> ReceiveFullMessageAsync(
             WebSocket ws,
             CancellationToken ct,

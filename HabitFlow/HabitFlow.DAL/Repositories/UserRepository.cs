@@ -36,5 +36,11 @@ namespace HabitFlow.DAL.Repositories
             this.context.Users.Update(user);
             await this.context.SaveChangesAsync();
         }
+
+        public async Task DeleteAsync(User user)
+        {
+            this.context.Users.Remove(user);
+            await this.context.SaveChangesAsync();
+        }
     }
 }
