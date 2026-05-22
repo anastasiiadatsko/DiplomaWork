@@ -8,10 +8,14 @@ namespace HabitFlow.Web.Controllers
     public class HabitController : Controller
     {
         private readonly IHabitService habitService;
+        private readonly ISharedHabitService sharedHabitService;
 
-        public HabitController(IHabitService habitService)
+        public HabitController(
+    IHabitService habitService,
+    ISharedHabitService sharedHabitService)
         {
             this.habitService = habitService;
+            this.sharedHabitService = sharedHabitService;
         }
 
         private Guid? CurrentUserId
@@ -62,7 +66,39 @@ namespace HabitFlow.Web.Controllers
                 return this.View(dto);
             }
 
-            await this.habitService.CreateHabitAsync(this.CurrentUserId.Value, dto);
+            var habitId = await this.habitService.CreateHabitAsync(this.CurrentUserId.Value, dto);
+
+            if (!string.IsNullOrWhiteSpace(dto.FriendEmail))
+            {
+                var acceptLink = this.Url.Action(
+                    "Accept",
+                    "SharedHabit",
+                    null,
+                    this.Request.Scheme)!;
+
+                var declineLink = this.Url.Action(
+                    "Decline",
+                    "SharedHabit",
+                    null,
+                    this.Request.Scheme)!;
+
+                var inviteResult = await this.sharedHabitService.InviteFriendAsync(
+                    habitId,
+                    this.CurrentUserId.Value,
+                    dto.FriendEmail,
+                    acceptLink,
+                    declineLink);
+
+                if (!inviteResult.Success)
+                {
+                    this.TempData["Error"] = inviteResult.Error;
+                    return this.RedirectToAction("Index");
+                }
+
+                this.TempData["Success"] = "Звичку створено, запрошення другу надіслано!";
+                return this.RedirectToAction("Index");
+            }
+
             this.TempData["Success"] = "Звичку створено!";
             return this.RedirectToAction("Index");
         }

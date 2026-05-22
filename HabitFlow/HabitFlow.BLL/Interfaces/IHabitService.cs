@@ -10,7 +10,7 @@ namespace HabitFlow.BLL.Interfaces
 
         Task<HabitDto?> GetByIdAsync(Guid habitId, Guid userId);
 
-        Task CreateHabitAsync(Guid userId, CreateHabitDto dto);
+        Task<Guid> CreateHabitAsync(Guid userId, CreateHabitDto dto);
 
         Task UpdateHabitAsync(Guid habitId, Guid userId, CreateHabitDto dto);
 

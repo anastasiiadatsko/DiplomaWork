@@ -26,8 +26,20 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IHabitService, HabitService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+<<<<<<< HEAD
 builder.Services.AddHttpClient<CoachService>();
 builder.Services.AddScoped<ICoachService, CoachService>();
+=======
+
+builder.Services.AddHttpClient<HabitFlow.BLL.Services.CoachService>();
+
+builder.Services.AddScoped<HabitFlow.BLL.Interfaces.ICoachService,
+                            HabitFlow.BLL.Services.CoachService>();
+
+builder.Services.AddScoped<ISharedHabitService, SharedHabitService>();
+
+builder.Services.AddScoped<ISharedHabitRepository, SharedHabitRepository>();
+>>>>>>> develop
 
 builder.Configuration.AddUserSecrets<Program>();
 

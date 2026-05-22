@@ -37,5 +37,11 @@
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public ICollection<Habit> Habits { get; set; } = new List<Habit>();
+
+        public ICollection<HabitParticipant> HabitParticipants { get; set; } = new List<HabitParticipant>();
+
+        public ICollection<HabitInvitation> SentHabitInvitations { get; set; } = new List<HabitInvitation>();
+
+        public ICollection<HabitInvitation> ReceivedHabitInvitations { get; set; } = new List<HabitInvitation>();
     }
 }

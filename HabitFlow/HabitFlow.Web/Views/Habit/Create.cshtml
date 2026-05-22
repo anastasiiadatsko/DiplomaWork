@@ -466,6 +466,13 @@
 
                 <div class="form-actions">
                     <a asp-controller="Habit" asp-action="Index" class="btn-cancel">Скасувати</a>
+                    <div class="form-group">
+                        <label asp-for="FriendEmail">Email друга для спільної звички</label>
+                        <input asp-for="FriendEmail"
+                               type="email"
+                               placeholder="friend@email.com" />
+                        <span asp-validation-for="FriendEmail" class="error-message"></span>
+                    </div>
                     <button type="submit" class="btn-submit">✓ Створити звичку</button>
                 </div>
             </form>

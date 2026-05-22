@@ -31,5 +31,9 @@ namespace HabitFlow.Domain.Entities
         public ICollection<HabitLog> Logs { get; set; } = new List<HabitLog>();
 
         public HabitAnalytics? Analytics { get; set; }
+
+        public ICollection<HabitParticipant> Participants { get; set; } = new List<HabitParticipant>();
+
+        public ICollection<HabitInvitation> Invitations { get; set; } = new List<HabitInvitation>();
     }
 }
