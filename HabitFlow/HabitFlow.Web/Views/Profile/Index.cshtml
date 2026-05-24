@@ -741,6 +741,62 @@
             }
         }
 
+        .balance-stars-panel {
+            margin-top: 26px;
+            padding-top: 22px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .balance-stars-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 16px;
+        }
+
+        .balance-stars-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+
+        .balance-star-row {
+            display: grid;
+            grid-template-columns: 180px 1fr 50px;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            background: #f9fafb;
+            border-radius: 14px;
+        }
+
+        .balance-star-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            min-width: 145px;
+        }
+
+        .balance-stars {
+            font-size: 15px;
+            letter-spacing: 1px;
+            color: #f59e0b;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        .balance-star-empty {
+            color: #d1d5db;
+        }
+
+        .balance-star-score {
+            font-size: 14px;
+            font-weight: 800;
+            color: #111827;
+            min-width: 42px;
+            text-align: right;
+        }
+
         @@media (max-width: 560px) {
             .navbar {
                 padding: 16px;
@@ -770,6 +826,8 @@
                 .balance-summary-row strong {
                     text-align: left;
                 }
+
+
         }
     </style>
 </head>
@@ -781,6 +839,7 @@
         <div class="nav-links">
             <a asp-controller="Dashboard" asp-action="Index" class="nav-link">Дашборд</a>
             <a asp-controller="Habit" asp-action="Index" class="nav-link">Звички</a>
+            <a asp-controller="BalanceConstellation" asp-action="Index" class="nav-link"> ✨ Сузір’я балансу</a>
             <a asp-controller="Auth" asp-action="Logout" class="logout-link">Вийти</a>
         </div>
     </nav>
@@ -969,6 +1028,50 @@
                                 <span>Потребує уваги</span>
                                 <strong>@Model.WeakestBalanceArea</strong>
                             </div>
+                        </div>
+                    </div>
+                    @{
+                        var balanceStars = new List<(string Name, int Value)>
+                {
+                ("Здоров’я", Model.BalanceWheel.Health),
+                ("Кар’єра / навчання", Model.BalanceWheel.Career),
+                ("Фінанси", Model.BalanceWheel.Finance),
+                ("Стосунки", Model.BalanceWheel.Relationships),
+                ("Саморозвиток", Model.BalanceWheel.SelfDevelopment),
+                ("Відпочинок", Model.BalanceWheel.Rest),
+                ("Емоційний стан", Model.BalanceWheel.EmotionalState),
+                ("Побут / оточення", Model.BalanceWheel.Environment)
+                };
+                    }
+
+                    <div class="balance-stars-panel">
+                        <div class="balance-stars-title">⭐ Оцінка сфер за зірочками</div>
+
+                        <div class="balance-stars-grid">
+                            @foreach (var area in balanceStars)
+                            {
+                                <div class="balance-star-row">
+                                    <div class="balance-star-name">@area.Name</div>
+
+                                    <div class="balance-stars">
+                                        @for (int i = 1; i <= 10; i++)
+                                        {
+                                            if (i <= area.Value)
+                                            {
+                                                <span>★</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="balance-star-empty">☆</span>
+                                            }
+                                        }
+                                    </div>
+
+                                    <div class="balance-star-score">
+                                        @area.Value/10
+                                    </div>
+                                </div>
+                            }
                         </div>
                     </div>
                 </section>

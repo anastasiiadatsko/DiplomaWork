@@ -97,6 +97,24 @@
 
                         @if (Context.Session.GetString("UserId") != null)
                         {
+                            <!-- DASHBOARD -->
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Dashboard"
+                                   asp-action="Index">
+                                    🏠 Дашборд
+                                </a>
+                            </li>
+
+                            <!-- HABITS -->
+                            <li class="nav-item">
+                                <a class="nav-link"
+                                   asp-controller="Habit"
+                                   asp-action="Index">
+                                    📋 Мої звички
+                                </a>
+                            </li>
+
                             <!-- PROFILE -->
                             <li class="nav-item">
                                 <a class="nav-link profile-link"

@@ -842,46 +842,6 @@
             </div>
         </div>
 
-        <div class="math-section">
-            <button class="toggle-math" onclick="toggleMath()">
-                <span id="toggleArrow">▶</span>
-                Детальна математика (для розробника)
-            </button>
-            <div id="mathDetails" style="display:none">
-                <div class="math-grid">
-                    <div class="math-item">
-                        <div class="math-item-title">МНК — Метод найменших квадратів</div>
-                        a₀ = @Model.MnkA0.ToString("F4")<br />
-                        a₁ = @Model.MnkA1.ToString("F4")<br />
-                        a₂ = @Model.MnkA2.ToString("F5")
-                        <div class="math-formula">y = a₀ + a₁·t + a₂·t²</div>
-                    </div>
-                    <div class="math-item">
-                        <div class="math-item-title">HSS — Градієнтний спуск</div>
-                        α (серія) = @Model.AlphaWeight.ToString("F3")<br />
-                        β (consistency) = @Model.BetaWeight.ToString("F3")<br />
-                        γ (стабільність) = @Model.GammaWeight.ToString("F3")
-                        <div class="math-formula">HSS = α·streak + β·consist + γ·stab</div>
-                    </div>
-                    <div class="math-item">
-                        <div class="math-item-title">Марківська матриця переходів</div>
-                        P(вик→вик) = @p00%<br />
-                        P(вик→проп) = @p01%<br />
-                        P(проп→вик) = @p10%<br />
-                        P(проп→проп) = @p11%
-                        <div class="math-formula">π = π·P (стаціонарний розподіл)</div>
-                    </div>
-                    <div class="math-item">
-                        <div class="math-item-title">Мінімакс (теорія ігор)</div>
-                        Оптимальний день: @Model.OptimalDayToAct<br />
-                        Ризиковий день: @Model.MostRiskyDay<br />
-                        Ризик зламу: @Model.BreakRisk%
-                        <div class="math-formula">maximin U(день, ризик)</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
