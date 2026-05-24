@@ -1,0 +1,327 @@
+﻿@using HabitFlow.BLL.DTOs
+@model BalanceConstellationViewModel
+
+@{
+    ViewData["Title"] = "Сузір’я балансу";
+}
+
+<style>
+    .balance-page {
+        background: #f0fdf4;
+        min-height: calc(100vh - 70px);
+        padding: 35px 20px 60px;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .balance-container {
+        max-width: 1180px;
+        margin: 0 auto;
+    }
+
+    .balance-header {
+        background: white;
+        border-radius: 24px;
+        padding: 30px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+        margin-bottom: 24px;
+    }
+
+    .balance-kicker {
+        color: #16a34a;
+        font-weight: 700;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 10px;
+    }
+
+    .balance-title {
+        font-size: 34px;
+        font-weight: 800;
+        color: #111827;
+        margin-bottom: 12px;
+    }
+
+    .balance-text {
+        color: #6b7280;
+        font-size: 16px;
+        line-height: 1.7;
+        max-width: 850px;
+    }
+
+    .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .summary-card {
+        background: white;
+        border-radius: 20px;
+        padding: 22px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.05);
+    }
+
+    .summary-label {
+        color: #6b7280;
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    .summary-value {
+        color: #111827;
+        font-size: 22px;
+        font-weight: 800;
+    }
+
+    .insight-box {
+        background: #dcfce7;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+        padding: 18px 20px;
+        border-radius: 18px;
+        font-weight: 600;
+        line-height: 1.6;
+        margin-bottom: 24px;
+    }
+
+    .areas-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 18px;
+    }
+
+    .area-card {
+        background: white;
+        border-radius: 22px;
+        padding: 24px;
+        box-shadow: 0 4px 18px rgba(0,0,0,0.05);
+        border: 2px solid transparent;
+    }
+
+        .area-card.weakest {
+            border-color: #fecaca;
+            background: #fff7f7;
+        }
+
+        .area-card.active {
+            border-color: #bbf7d0;
+            background: #f0fdf4;
+        }
+
+    .area-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+    }
+
+    .area-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #111827;
+        font-size: 20px;
+        font-weight: 800;
+    }
+
+    .area-emoji {
+        font-size: 26px;
+    }
+
+    .badge {
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+    .badge-red {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .badge-green {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .metric {
+        margin-top: 14px;
+    }
+
+    .metric-top {
+        display: flex;
+        justify-content: space-between;
+        color: #374151;
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+
+    .track {
+        height: 12px;
+        background: #e5e7eb;
+        border-radius: 999px;
+        overflow: hidden;
+    }
+
+    .fill-self {
+        height: 100%;
+        background: linear-gradient(90deg, #60a5fa, #8b5cf6);
+    }
+
+    .fill-activity {
+        height: 100%;
+        background: linear-gradient(90deg, #16a34a, #86efac);
+    }
+
+    .status {
+        margin-top: 14px;
+        color: #6b7280;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .recommendation {
+        margin-top: 24px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        padding: 22px;
+        border-radius: 20px;
+        line-height: 1.7;
+        font-weight: 500;
+    }
+
+    @@media (max-width: 900px) {
+        .summary-grid,
+        .areas-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .balance-title {
+            font-size: 28px;
+        }
+    }
+</style>
+
+<div class="balance-page">
+    <div class="balance-container">
+
+        <div class="balance-header">
+            <div class="balance-kicker">Динамічне сузір’я балансу</div>
+
+            <h1 class="balance-title">
+                Сузір’я балансу ✨
+            </h1>
+
+            <p class="balance-text">
+                Ця сторінка показує не “реальний стан здоров’я чи фінансів”,
+                а поєднання самооцінки користувача та активності звичок у кожній сфері.
+                Самооцінка залишається суб’єктивною, а активність рахується за виконаннями звичок.
+            </p>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-label">Середня самооцінка</div>
+                <div class="summary-value">@Model.AverageSelfScore / 10</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-label">Середня активність</div>
+                <div class="summary-value">@Model.AverageActivityScore%</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-label">Найслабша сфера</div>
+                <div class="summary-value">@Model.WeakestAreaName</div>
+            </div>
+
+            <div class="summary-card">
+                <div class="summary-label">Найактивніша сфера</div>
+                <div class="summary-value">@Model.MostActiveAreaName</div>
+            </div>
+        </div>
+
+        <div class="insight-box">
+            @Model.MainInsight
+        </div>
+
+        <div class="areas-grid">
+            @foreach (var area in Model.Areas)
+            {
+                var cardClass = "area-card";
+
+                if (area.IsWeakest)
+                {
+                    cardClass += " weakest";
+                }
+
+                if (area.IsMostActive)
+                {
+                    cardClass += " active";
+                }
+
+                <div class="@cardClass">
+                    <div class="area-head">
+                        <div class="area-title">
+                            <span class="area-emoji">@area.Emoji</span>
+                            <span>@area.Name</span>
+                        </div>
+
+                        @if (area.IsWeakest)
+                        {
+                            <span class="badge badge-red">найслабша</span>
+                        }
+                        else if (area.IsMostActive)
+                        {
+                            <span class="badge badge-green">найактивніша</span>
+                        }
+                        else
+                        {
+                            <span class="badge">@area.HabitsCount звичок</span>
+                        }
+                    </div>
+
+                    <div class="metric">
+                        <div class="metric-top">
+                            <span>Самооцінка користувача</span>
+                            <strong>@area.SelfScore / 10</strong>
+                        </div>
+
+                        <div class="track">
+                            <div class="fill-self" style="width:@(area.SelfScore * 10)%"></div>
+                        </div>
+                    </div>
+
+                    <div class="metric">
+                        <div class="metric-top">
+                            <span>Активність звичок</span>
+                            <strong>@area.ActivityScore%</strong>
+                        </div>
+
+                        <div class="track">
+                            <div class="fill-activity" style="width:@area.ActivityScore%"></div>
+                        </div>
+                    </div>
+
+                    <div class="status">
+                        @area.StatusText<br />
+                        Виконань у цій сфері: <strong>@area.CompletedCount</strong>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="recommendation">
+            <strong>💡 Рекомендація:</strong>
+            @Model.RecommendationText
+        </div>
+
+    </div>
+</div>
