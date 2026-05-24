@@ -173,23 +173,33 @@ namespace HabitFlow.Web.Controllers
             return this.RedirectToAction("Index");
         }
 
+        
         [HttpGet]
-        public async Task<IActionResult> ManualLog(Guid id)
+        public async Task<IActionResult> ManualLog(Guid id, Guid habitId)
         {
             if (this.CurrentUserId == null)
             {
                 return this.RedirectToAction("Login", "Auth");
             }
 
-            var habit = await this.habitService.GetByIdAsync(id, this.CurrentUserId.Value);
+            var realHabitId = id != Guid.Empty ? id : habitId;
+
+            if (realHabitId == Guid.Empty)
+            {
+                return this.RedirectToAction("Index");
+            }
+
+            var habit = await this.habitService.GetByIdAsync(realHabitId, this.CurrentUserId.Value);
+
             if (habit == null)
             {
                 return this.NotFound();
             }
 
-            this.ViewBag.HabitId = id;
+            this.ViewBag.HabitId = realHabitId;
             this.ViewBag.HabitName = habit.Name;
             this.ViewBag.HabitColor = habit.Color;
+
             return this.View();
         }
 

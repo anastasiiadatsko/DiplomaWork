@@ -39,7 +39,20 @@ namespace HabitFlow.DAL.Repositories
 
         public async Task DeleteAsync(User user)
         {
+            var invitations = await this.context.HabitInvitations
+                .Where(i => i.InviterUserId == user.Id || i.InviteeUserId == user.Id)
+                .ToListAsync();
+
+            this.context.HabitInvitations.RemoveRange(invitations);
+
+            var participants = await this.context.HabitParticipants
+                .Where(p => p.UserId == user.Id)
+                .ToListAsync();
+
+            this.context.HabitParticipants.RemoveRange(participants);
+
             this.context.Users.Remove(user);
+
             await this.context.SaveChangesAsync();
         }
     }

@@ -26,6 +26,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IHabitService, HabitService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
+builder.Services.AddScoped<IBalanceConstellationService, BalanceConstellationService>();
 builder.Services.AddHttpClient<CoachService>();
 builder.Services.AddScoped<ICoachService, CoachService>();
 
