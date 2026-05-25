@@ -160,7 +160,7 @@ namespace HabitFlow.BLL.Services
                 _ => $"{c.TotalCompleted} виконань!",
             };
 
-            return ($"Milestone: {msg}", "🏆",
+            return ($"Досягнення: {msg}", "🏆",
                 new List<CoachQuestion>
                 {
                     new() { Id = "feeling", Text = $"{c.TotalCompleted} виконань — як це для тебе?",

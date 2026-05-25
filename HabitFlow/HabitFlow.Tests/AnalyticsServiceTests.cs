@@ -210,6 +210,11 @@ namespace HabitFlow.Tests
             {
                 this.logs = logs;
             }
+            public Task<List<HabitLog>> GetByHabitIdAsync(Guid habitId, Guid userId)
+            {
+                return Task.FromResult(
+                    logs.Where(l => l.HabitId == habitId && l.UserId == userId).ToList());
+            }
 
             public Task<HabitLog?> GetByDateAsync(Guid habitId, DateTime date)
             {
