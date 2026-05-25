@@ -4,6 +4,7 @@ using HabitFlow.Domain.Entities;
 using HabitFlow.Domain.Enums;
 using HabitFlow.Domain.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
+using static System.Reflection.Metadata.BlobBuilder;
 
 namespace HabitFlow.Tests
 {
@@ -235,6 +236,11 @@ namespace HabitFlow.Tests
             public FakeHabitLogRepository(params HabitLog[] logs)
             {
                 this.Logs = logs.ToList();
+            }
+            public Task<List<HabitLog>> GetByHabitIdAsync(Guid habitId, Guid userId)
+            {
+                return Task.FromResult(
+                    this.Logs.Where(l => l.HabitId == habitId && l.UserId == userId).ToList());
             }
 
             public List<HabitLog> Logs { get; }

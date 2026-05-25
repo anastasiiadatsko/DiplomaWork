@@ -25,7 +25,7 @@
         ? "Тільки починаєш. Головне — не здаватись!"
         : Model.HabitStrengthScore < 60 ? "Є прогрес! Звичка починає закріплюватись."
         : Model.HabitStrengthScore < 80 ? "Сильна звичка. Ще трохи — і стане автоматичною."
-        : "Звичка повністю сформована. Ти молодець!";
+        : "Звичка повністю сформована. Молодець!";
 
     var riskColor = !Model.HasEnoughData ? "#9ca3af"
         : Model.BreakRisk < 25 ? "#16a34a"
@@ -34,19 +34,23 @@
 
     var riskText = !Model.HasEnoughData ? "Недостатньо даних для розрахунку."
         : Model.BreakRisk < 25 ? "Низький ризик — ти в хорошому ритмі 💪"
-        : Model.BreakRisk < 50 ? "Помірний ризик — будь уважна ⚡"
+        : Model.BreakRisk < 50 ? "Помірний ризик — будь уважний(а) ⚡"
         : "Є ризик зупинитись — постав нагадування ⚠️";
 
-    bool isFormed = Model.HasEnoughData && Model.PredictedDaysToForm == 0;
-    bool isUnknown = Model.HasEnoughData && Model.PredictedDaysToForm >= 200;
+    bool isFormed = Model.AlreadyFormed;
+    bool isUnknown = Model.HasEnoughData && !Model.AlreadyFormed && Model.PredictedDaysToForm >= 200;
     bool noDataYet = !Model.HasEnoughData;
-
+    bool hasPrediction = Model.HasEnoughData
+                         && !Model.AlreadyFormed
+                         && Model.PredictedFormationDate.HasValue
+                         && Model.PredictedDaysToForm > 0
+                         && Model.PredictedDaysToForm < 200;
     bool hasMatrix = Model.TransitionMatrix != null && Model.TransitionMatrix.Length > 1;
     double p00 = hasMatrix && Model.HasEnoughData ? Math.Round(Model.TransitionMatrix[0][0] * 100) : 0;
     double p10 = hasMatrix && Model.HasEnoughData ? Math.Round(Model.TransitionMatrix[1][0] * 100) : 0;
 
     bool markovDataReliable = hasMatrix && Model.HasEnoughData && Model.DaysSinceStart >= 14;
-    double skipImpactVal = Model.SkipImpact > 0 ? Model.SkipImpact : Math.Max(0, p00 - p10);
+    double skipImpactVal = Model.SkipImpact;
 
     bool hasDaysData = Model.HasEnoughData
         && !string.IsNullOrEmpty(Model.OptimalDayToAct)
@@ -651,18 +655,27 @@
                 else if (isFormed)
                 {
                     <div class="insight-value" style="color:#16a34a">Вже сформована!</div>
-                    <div class="insight-desc">Ти досягла мети в 66 виконань.</div>
+                    <div class="insight-desc">Ти досягнув(ла) мети в 66 виконань.</div>
                 }
                 else if (isUnknown)
                 {
                     <div class="insight-value" style="color:#f59e0b">Тримай темп</div>
                     <div class="insight-desc">Поточний прогрес стабільний. Продовжуй у тому ж темпі.</div>
                 }
-                else
+                else if (hasPrediction)
                 {
+          
                     <div class="insight-value" style="color:#16a34a">~@Model.PredictedDaysToForm днів</div>
                     <div class="insight-desc">
-                        Орієнтовна дата: <strong>@Model.PredictedFormationDate!.Value.ToString("dd.MM.yyyy")</strong>
+                        Орієнтовна дата: <strong>@(Model.PredictedFormationDate?.ToString("dd.MM.yyyy") ?? "—")</strong>
+                    </div>
+                }
+                else
+                {
+                    <div class="insight-value" style="color:#f59e0b; font-size:16px;">Нерівномірний темп</div>
+                    <div class="insight-desc">
+                        Поточний темп нерівномірний — прогноз дати формування недоступний.
+                        Спробуй виконувати звичку стабільніше.
                     </div>
                 }
                 <div class="insight-explain">
@@ -696,7 +709,6 @@
                 }
             </div>
 
-         
             <div class="insight-card">
                 <div class="insight-icon">📅</div>
                 <div class="insight-label">Твої дні</div>
@@ -747,6 +759,7 @@
                     {
                         var color = stat.Rate >= 70 ? "#16a34a"
                         : stat.Rate >= 40 ? "#f59e0b"
+                        : stat.Total == 0 ? "#d1d5db"
                         : "#ef4444";
                         var clamp = Math.Min(100.0, stat.Rate);
                         <div class="weekday-row">
@@ -754,7 +767,9 @@
                             <div class="weekday-track">
                                 <div class="weekday-fill" style="width:@clamp%; background:@color"></div>
                             </div>
-                            <span class="weekday-pct" style="color:@color">@stat.Rate%</span>
+                            <span class="weekday-pct" style="color:@color">
+                                @(stat.Total > 0 ? $"{stat.Rate}%" : "—")
+                            </span>
                         </div>
                     }
                 </div>
@@ -774,7 +789,7 @@
                 <div class="markov-cards">
                     <div class="markov-row">
                         <div class="markov-row-label">
-                            ✅ Якщо <strong>виконала вчора</strong> —<br />
+                            ✅ Якщо <strong>виконав(ла) вчора</strong> —<br />
                             ймовірність виконати сьогодні
                         </div>
                         <div class="markov-prob" style="color:@(noDataYet ? "#9ca3af" : "#16a34a")">
@@ -783,7 +798,7 @@
                     </div>
                     <div class="markov-row">
                         <div class="markov-row-label">
-                            ❌ Якщо <strong>пропустила вчора</strong> —<br />
+                            ❌ Якщо <strong>пропустив(ла) вчора</strong> —<br />
                             ймовірність виконати сьогодні
                         </div>
                         <div class="markov-prob" style="color:@(noDataYet ? "#9ca3af" : (p10 >= 60 ? "#16a34a" : "#f59e0b"))">

@@ -2,7 +2,6 @@
 {
     public class AnalyticsViewModel
     {
-        // Базові метрики
         public string HabitName { get; set; } = string.Empty;
         public string HabitColor { get; set; } = string.Empty;
         public int DaysSinceStart { get; set; }
@@ -12,20 +11,16 @@
         public double ConsistencyRate { get; set; }
         public string MainInsight { get; set; } = string.Empty;
         public string ActionTip { get; set; } = string.Empty;
-
-        // МНК — апроксимація
+        public bool AlreadyFormed { get; set; }
         public List<MnkDataPoint> MnkPoints { get; set; } = new();
         public List<MnkDataPoint> MnkTrendLine { get; set; } = new();
         public double MnkA0 { get; set; }
         public double MnkA1 { get; set; }
         public double MnkA2 { get; set; }
         public int PredictedDaysToForm { get; set; }
-        public DateTime? PredictedFormationDate { get; set; } // тільки один, nullable
-
+        public DateTime? PredictedFormationDate { get; set; }
         public bool IsStreakActive { get; set; }
         public bool HasEnoughData { get; set; }
-
-        // Markov
         public double MarkovP00 { get; set; }
         public double MarkovP10 { get; set; }
         public double MarkovP01 { get; set; }
@@ -36,19 +31,13 @@
         public double[][] TransitionMatrix { get; set; } = Array.Empty<double[]>();
         public List<double> Next7DaysProbabilities { get; set; } = new();
         public double BreakRisk { get; set; }
-
-        // HSS з градієнтним спуском
         public double HabitStrengthScore { get; set; }
         public double AlphaWeight { get; set; }
         public double BetaWeight { get; set; }
         public double GammaWeight { get; set; }
-
-        // Теорія ігор — мінімакс
         public List<WeekdayRisk> WeekdayRisks { get; set; } = new();
         public string OptimalDayToAct { get; set; } = string.Empty;
         public string MostRiskyDay { get; set; } = string.Empty;
-
-        // Дані для графіків
         public List<DailyLogPoint> DailyLogs { get; set; } = new();
         public List<WeekdayStats> WeekdayStats { get; set; } = new();
     }

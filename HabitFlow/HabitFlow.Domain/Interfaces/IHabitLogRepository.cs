@@ -13,5 +13,7 @@ namespace HabitFlow.Domain.Interfaces
         Task AddAsync(HabitLog log);
 
         Task UpdateAsync(HabitLog log);
+
+        Task<List<HabitLog>> GetByHabitIdAsync(Guid habitId, Guid userId);
     }
 }
