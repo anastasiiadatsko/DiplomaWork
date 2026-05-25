@@ -10,7 +10,6 @@
         public int CurrentStreak { get; set; }
         public int MaxStreak { get; set; }
         public double ConsistencyRate { get; set; }
-
         public string MainInsight { get; set; } = string.Empty;
         public string ActionTip { get; set; } = string.Empty;
 
@@ -21,22 +20,17 @@
         public double MnkA1 { get; set; }
         public double MnkA2 { get; set; }
         public int PredictedDaysToForm { get; set; }
-        public DateTime PredictedFormationDate { get; set; }
-  
-        // Чи жива серія зараз (streak > 0)
-        // Визначає який ризик показувати у картці "Ймовірність пропустити завтра"
+        public DateTime? PredictedFormationDate { get; set; } // тільки один, nullable
+
         public bool IsStreakActive { get; set; }
+        public bool HasEnoughData { get; set; }
 
-        // Перехідні ймовірності Маркова (всі 4 для UI)
-        public double MarkovP00 { get; set; } // виконала вчора  → виконає сьогодні
-        public double MarkovP10 { get; set; } // пропустила вчора → виконає сьогодні
-        public double MarkovP01 { get; set; } // виконала вчора  → пропустить сьогодні
-        public double MarkovP11 { get; set; } // пропустила вчора → пропустить сьогодні
-
-        // "Один пропуск знижує шанси на X%" — динамічно (p00 - p10)
+        // Markov
+        public double MarkovP00 { get; set; }
+        public double MarkovP10 { get; set; }
+        public double MarkovP01 { get; set; }
+        public double MarkovP11 { get; set; }
         public double SkipImpact { get; set; }
-
-        // Марківські ланцюги
         public double MarkovProbCompleted { get; set; }
         public double MarkovProbSkipped { get; set; }
         public double[][] TransitionMatrix { get; set; } = Array.Empty<double[]>();

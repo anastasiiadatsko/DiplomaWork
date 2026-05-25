@@ -400,7 +400,6 @@ namespace HabitFlow.BLL.Services
             return contents;
         }
 
-        /// <summary>Calls Gemini and returns the text, or null on failure.</summary>
         private async Task<string?> CallGeminiAsync(Dictionary<string, object> body)
         {
             var url = string.Format(GeminiUrl, this.geminiModel, this.geminiApiKey);

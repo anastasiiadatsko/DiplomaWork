@@ -587,7 +587,7 @@
     <nav class="navbar">
         <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
         <div class="nav-links">
-            <a asp-controller="Dashboard" asp-action="Index" class="nav-link active">🏠 Дашборд</a>
+            <a asp-controller="Dashboard" asp-action="Index" class="nav-link active">🏠 Дошка звичок</a>
             <a asp-controller="Habit" asp-action="Index" class="nav-link">📋 Мої звички</a>
             <a asp-controller="BalanceConstellation" asp-action="Index" class="nav-link"> ✨ Сузір’я балансу</a>
             <a asp-controller="Profile" asp-action="Index" class="nav-link">👤 @Model.UserName</a>
@@ -608,7 +608,7 @@
                 <div class="page-title">
                     @{
                         var hour = DateTime.Now.Hour;
-                        var greeting = hour < 12 ? "Доброго ранку" : hour < 17 ? "Доброго дня" : "Доброго вечора";
+                        var greeting = hour < 12 ? "Доброго ранку" : hour < 17 ? "Добрий дня" : "Добрий вечір";
                     }
                     @greeting, @Model.UserName! 👋
                 </div>
@@ -649,7 +649,7 @@
         {
             <div class="recommendations-section">
                 <div class="recommendations-header">
-                    <div class="recommendations-title">🤖 AI-рекомендації для тебе</div>
+                    <div class="recommendations-title">🤖 Рекомендації для тебе</div>
                     <div class="recommendations-badge">Персонально</div>
                 </div>
 
