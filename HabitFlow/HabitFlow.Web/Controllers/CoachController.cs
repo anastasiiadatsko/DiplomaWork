@@ -127,6 +127,11 @@ namespace HabitFlow.Web.Controllers
                 return;
             }
 
+            // Голосова модель — окремий ключ конфігу, щоб не плутати з текстовою
+            var voiceModel = _configuration["Gemini:VoiceModel"]
+                ?? "models/gemini-2.5-flash-native-audio-latest";
+            _logger.LogInformation("VoiceStream: voiceModel={M}", voiceModel);
+
             var geminiUri = new Uri(
                 "wss://generativelanguage.googleapis.com/ws/" +
                 "google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent" +
@@ -150,7 +155,7 @@ namespace HabitFlow.Web.Controllers
             {
                 setup = new
                 {
-                    model = "models/gemini-2.5-flash-native-audio-latest",
+                    model = voiceModel,
                     generation_config = new
                     {
                         response_modalities = new[] { "AUDIO" },
@@ -191,6 +196,7 @@ namespace HabitFlow.Web.Controllers
                 return;
             }
 
+            // Читаємо setupComplete — збираємо повне повідомлення
             try
             {
                 var fullMessage = await ReceiveFullMessageAsync(geminiWs, CancellationToken.None,
@@ -258,6 +264,10 @@ namespace HabitFlow.Web.Controllers
             }
         }
 
+        /// <summary>
+        /// Збирає всі WebSocket-фрейми до EndOfMessage і повертає повний буфер.
+        /// Повертає null якщо з'єднання закрито або стан не Open після отримання.
+        /// </summary>
         private async Task<byte[]?> ReceiveFullMessageAsync(
             WebSocket ws,
             CancellationToken ct,
@@ -303,7 +313,6 @@ namespace HabitFlow.Web.Controllers
                     && browser.State == WebSocketState.Open
                     && gemini.State == WebSocketState.Open)
                 {
-                    // Збираємо повне повідомлення від браузера перед відправкою до Gemini
                     var payload = await ReceiveFullMessageAsync(browser, ct);
                     if (payload == null)
                     {
@@ -339,7 +348,6 @@ namespace HabitFlow.Web.Controllers
                     && gemini.State == WebSocketState.Open
                     && browser.State == WebSocketState.Open)
                 {
-                    // Збираємо повне повідомлення від Gemini перед відправкою до браузера
                     var payload = await ReceiveFullMessageAsync(gemini, ct);
                     if (payload == null)
                     {
