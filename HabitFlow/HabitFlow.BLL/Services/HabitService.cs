@@ -251,7 +251,19 @@ namespace HabitFlow.BLL.Services
                 return;
             }
 
-            var date = UtcDate(dto.Date);
+            var selectedDate = dto.Date.Date;
+
+            if (selectedDate > DateTime.Today)
+            {
+                return;
+            }
+
+            if (selectedDate < habit.StartDate.Date)
+            {
+                return;
+            }
+
+            var date = UtcDate(selectedDate);
 
             var allLogs = await this.habitLogRepository.GetByHabitIdAsync(dto.HabitId);
 
@@ -284,7 +296,7 @@ namespace HabitFlow.BLL.Services
         }
 
         public async Task ManualLogRangeAsync(
-    Guid userId, Guid habitId, DateTime from, DateTime to)
+            Guid userId, Guid habitId, DateTime from, DateTime to)
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
 
@@ -300,9 +312,27 @@ namespace HabitFlow.BLL.Services
                 return;
             }
 
+            var fromDate = from.Date;
+            var toDate = to.Date;
+
+            if (toDate > DateTime.Today)
+            {
+                toDate = DateTime.Today;
+            }
+
+            if (fromDate < habit.StartDate.Date)
+            {
+                fromDate = habit.StartDate.Date;
+            }
+
+            if (fromDate > toDate)
+            {
+                return;
+            }
+
             var allLogs = await this.habitLogRepository.GetByHabitIdAsync(habitId);
 
-            for (var d = from.Date; d <= to.Date; d = d.AddDays(1))
+            for (var d = fromDate; d <= toDate; d = d.AddDays(1))
             {
                 var date = UtcDate(d);
 
@@ -330,7 +360,10 @@ namespace HabitFlow.BLL.Services
             }
 
             this.logger.LogInformation(
-                "Діапазон логів: {HabitId} з {From} по {To}", habitId, from, to);
+                "Діапазон логів: {HabitId} з {From} по {To}",
+                habitId,
+                fromDate,
+                toDate);
         }
 
         // ── PRIVATE HELPERS ───────────────────────────────────────────────
