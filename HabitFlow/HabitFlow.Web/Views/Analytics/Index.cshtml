@@ -4,7 +4,7 @@
 
 @{
     Layout = null;
-    var habitId = ViewBag.HabitId;
+    var habitId = ViewBag.HabitId as Guid? ?? Guid.Empty;
 
     var jsonOpts = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
     var next7Json = JsonSerializer.Serialize(Model.Next7DaysProbabilities, jsonOpts);
@@ -25,28 +25,36 @@
         ? "Тільки починаєш. Головне — не здаватись!"
         : Model.HabitStrengthScore < 60 ? "Є прогрес! Звичка починає закріплюватись."
         : Model.HabitStrengthScore < 80 ? "Сильна звичка. Ще трохи — і стане автоматичною."
-        : "Звичка повністю сформована. Ти молодець!";
+        : "Звичка повністю сформована. Молодець!";
 
-    var riskColor = Model.BreakRisk < 25 ? "#16a34a"
+    var riskColor = !Model.HasEnoughData ? "#9ca3af"
+        : Model.BreakRisk < 25 ? "#16a34a"
         : Model.BreakRisk < 50 ? "#f59e0b"
         : "#ef4444";
 
-    var riskText = Model.BreakRisk < 25
-        ? "Низький ризик — ти в хорошому ритмі 💪"
-        : Model.BreakRisk < 50 ? "Помірний ризик — будь уважна ⚡"
+    var riskText = !Model.HasEnoughData ? "Недостатньо даних для розрахунку."
+        : Model.BreakRisk < 25 ? "Низький ризик — ти в хорошому ритмі 💪"
+        : Model.BreakRisk < 50 ? "Помірний ризик — будь уважний(а) ⚡"
         : "Є ризик зупинитись — постав нагадування ⚠️";
 
-    bool isFormed = Model.PredictedDaysToForm == 0;
-    bool isUnknown = Model.PredictedDaysToForm >= 200;
-
+    bool isFormed = Model.AlreadyFormed;
+    bool isUnknown = Model.HasEnoughData && !Model.AlreadyFormed && Model.PredictedDaysToForm >= 200;
+    bool noDataYet = !Model.HasEnoughData;
+    bool hasPrediction = Model.HasEnoughData
+                         && !Model.AlreadyFormed
+                         && Model.PredictedFormationDate.HasValue
+                         && Model.PredictedDaysToForm > 0
+                         && Model.PredictedDaysToForm < 200;
     bool hasMatrix = Model.TransitionMatrix != null && Model.TransitionMatrix.Length > 1;
-    double p00 = hasMatrix ? Math.Round(Model.TransitionMatrix[0][0] * 100) : 0;
-    double p01 = hasMatrix ? Math.Round(Model.TransitionMatrix[0][1] * 100) : 0;
-    double p10 = hasMatrix ? Math.Round(Model.TransitionMatrix[1][0] * 100) : 0;
-    double p11 = hasMatrix ? Math.Round(Model.TransitionMatrix[1][1] * 100) : 0;
+    double p00 = hasMatrix && Model.HasEnoughData ? Math.Round(Model.TransitionMatrix[0][0] * 100) : 0;
+    double p10 = hasMatrix && Model.HasEnoughData ? Math.Round(Model.TransitionMatrix[1][0] * 100) : 0;
 
-    bool markovDataReliable = hasMatrix && Model.DaysSinceStart >= 14;
-    double skipImpactVal = Model.SkipImpact > 0 ? Model.SkipImpact : Math.Max(0, p00 - p10);
+    bool markovDataReliable = hasMatrix && Model.HasEnoughData && Model.DaysSinceStart >= 14;
+    double skipImpactVal = Model.SkipImpact;
+
+    bool hasDaysData = Model.HasEnoughData
+        && !string.IsNullOrEmpty(Model.OptimalDayToAct)
+        && !string.IsNullOrEmpty(Model.MostRiskyDay);
 }
 
 <!DOCTYPE html>
@@ -499,60 +507,6 @@
             margin-bottom: 10px;
         }
 
-        .math-section {
-            background: white;
-            padding: 22px;
-            border-radius: 18px;
-            box-shadow: 0 2px 12px rgba(0,0,0,.04);
-            margin-top: 4px;
-        }
-
-        .toggle-math {
-            background: none;
-            border: none;
-            font-size: 14px;
-            cursor: pointer;
-            font-weight: 600;
-            color: #374151;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 0;
-        }
-
-        .math-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-top: 16px;
-        }
-
-        .math-item {
-            background: #f9fafb;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 13px;
-            line-height: 1.7;
-        }
-
-        .math-item-title {
-            font-weight: 700;
-            margin-bottom: 6px;
-            font-size: 11px;
-            color: #6b7280;
-            text-transform: uppercase;
-        }
-
-        .math-formula {
-            margin-top: 8px;
-            background: #f3f4f6;
-            padding: 8px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 11px;
-            color: #374151;
-        }
-
         @@media (max-width: 768px) {
             .navbar {
                 padding: 12px 16px;
@@ -567,10 +521,6 @@
             }
 
             .charts-row {
-                grid-template-columns: 1fr;
-            }
-
-            .math-grid {
                 grid-template-columns: 1fr;
             }
 
@@ -598,7 +548,7 @@
     <nav class="navbar">
         <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
         <div class="nav-links">
-            <a asp-controller="Dashboard" asp-action="Index" class="nav-link">🏠 Дашборд</a>
+            <a asp-controller="Dashboard" asp-action="Index" class="nav-link">🏠 Дошка звичок</a>
             <a asp-controller="Habit" asp-action="Index" class="nav-link">📋 Звички</a>
             <a asp-controller="Auth" asp-action="Logout" class="btn-logout">Вийти</a>
         </div>
@@ -636,7 +586,7 @@
            asp-route-habitId="@habitId" class="coach-link">
             <span style="font-size:32px">🤖</span>
             <div>
-                <div style="font-weight:700; font-size:15px;">Поговори з AI-коучем</div>
+                <div style="font-weight:700; font-size:15px;">Поговори з AI-агентом</div>
                 <div style="font-size:13px; color:#6b7280;">Персональні поради на основі твоєї аналітики</div>
             </div>
             <span style="margin-left:auto; color:#16a34a; font-size:20px;">→</span>
@@ -697,21 +647,35 @@
             <div class="insight-card">
                 <div class="insight-icon">🎯</div>
                 <div class="insight-label">Коли звичка закріпиться</div>
-                @if (isFormed)
+                @if (noDataYet)
+                {
+                    <div class="insight-value" style="color:#9ca3af; font-size:16px;">Потрібно більше даних</div>
+                    <div class="insight-desc">Виконай звичку хоча б 3 рази — і прогноз з'явиться.</div>
+                }
+                else if (isFormed)
                 {
                     <div class="insight-value" style="color:#16a34a">Вже сформована!</div>
-                    <div class="insight-desc">Ти досягла мети в 66 виконань.</div>
+                    <div class="insight-desc">Ти досягнув(ла) мети в 66 виконань.</div>
                 }
                 else if (isUnknown)
                 {
                     <div class="insight-value" style="color:#f59e0b">Тримай темп</div>
                     <div class="insight-desc">Поточний прогрес стабільний. Продовжуй у тому ж темпі.</div>
                 }
-                else
+                else if (hasPrediction)
                 {
+          
                     <div class="insight-value" style="color:#16a34a">~@Model.PredictedDaysToForm днів</div>
                     <div class="insight-desc">
-                        Орієнтовна дата: <strong>@Model.PredictedFormationDate.ToString("dd.MM.yyyy")</strong>
+                        Орієнтовна дата: <strong>@(Model.PredictedFormationDate?.ToString("dd.MM.yyyy") ?? "—")</strong>
+                    </div>
+                }
+                else
+                {
+                    <div class="insight-value" style="color:#f59e0b; font-size:16px;">Нерівномірний темп</div>
+                    <div class="insight-desc">
+                        Поточний темп нерівномірний — прогноз дати формування недоступний.
+                        Спробуй виконувати звичку стабільніше.
                     </div>
                 }
                 <div class="insight-explain">
@@ -723,30 +687,49 @@
             <div class="insight-card">
                 <div class="insight-icon">⚡</div>
                 <div class="insight-label">Ймовірність пропустити завтра</div>
-                <div class="insight-value" style="color:@riskColor">@Model.BreakRisk%</div>
-                <div class="insight-desc">@riskText</div>
-                <div class="insight-explain">
-                    @if (Model.IsStreakActive)
-                    {
-                        <span>Серія активна. Розраховано як шанс зламати серію після виконання.</span>
-                    }
-                    else
-                    {
-                        <span>Серія зараз не активна. Розраховано як шанс знову пропустити після пропуску.</span>
-                    }
-                </div>
+                @if (noDataYet)
+                {
+                    <div class="insight-value" style="color:#9ca3af; font-size:16px;">—</div>
+                    <div class="insight-desc">Недостатньо даних для розрахунку.</div>
+                }
+                else
+                {
+                    <div class="insight-value" style="color:@riskColor">@Model.BreakRisk%</div>
+                    <div class="insight-desc">@riskText</div>
+                    <div class="insight-explain">
+                        @if (Model.IsStreakActive)
+                        {
+                            <span>Серія активна. Розраховано як шанс зламати серію після виконання.</span>
+                        }
+                        else
+                        {
+                            <span>Серія зараз не активна. Розраховано як шанс знову пропустити після пропуску.</span>
+                        }
+                    </div>
+                }
             </div>
 
             <div class="insight-card">
                 <div class="insight-icon">📅</div>
                 <div class="insight-label">Твої дні</div>
-                <div class="insight-value" style="color:#16a34a">@Model.OptimalDayToAct</div>
-                <div class="insight-desc">найлегший день для тебе</div>
-                <div class="insight-explain">
-                    Уникай або готуйся заздалегідь до
-                    <strong style="color:#ef4444">@Model.MostRiskyDay</strong> —
-                    саме в цей день найчастіше трапляються пропуски.
-                </div>
+                @if (!hasDaysData)
+                {
+                    <div class="insight-value" style="color:#9ca3af; font-size:16px;">—</div>
+                    <div class="insight-desc">Недостатньо даних для аналізу днів.</div>
+                    <div class="insight-explain">
+                        Виконай звичку хоча б 3 рази, щоб дізнатись свої найкращі та найризикованіші дні.
+                    </div>
+                }
+                else
+                {
+                    <div class="insight-value" style="color:#16a34a">@Model.OptimalDayToAct</div>
+                    <div class="insight-desc">найлегший день для тебе</div>
+                    <div class="insight-explain">
+                        Уникай або готуйся заздалегідь до
+                        <strong style="color:#ef4444">@Model.MostRiskyDay</strong> —
+                        саме в цей день найчастіше трапляються пропуски.
+                    </div>
+                }
             </div>
         </div>
 
@@ -776,6 +759,7 @@
                     {
                         var color = stat.Rate >= 70 ? "#16a34a"
                         : stat.Rate >= 40 ? "#f59e0b"
+                        : stat.Total == 0 ? "#d1d5db"
                         : "#ef4444";
                         var clamp = Math.Min(100.0, stat.Rate);
                         <div class="weekday-row">
@@ -783,14 +767,16 @@
                             <div class="weekday-track">
                                 <div class="weekday-fill" style="width:@clamp%; background:@color"></div>
                             </div>
-                            <span class="weekday-pct" style="color:@color">@stat.Rate%</span>
+                            <span class="weekday-pct" style="color:@color">
+                                @(stat.Total > 0 ? $"{stat.Rate}%" : "—")
+                            </span>
                         </div>
                     }
                 </div>
             </div>
 
             <div class="chart-card">
-                <div class="chart-title">🔗 Твої паттерни поведінки</div>
+                <div class="chart-title">🔗 Твої шаблони поведінки</div>
                 <div class="chart-subtitle">Як один день впливає на наступний</div>
 
                 @if (!markovDataReliable)
@@ -803,39 +789,53 @@
                 <div class="markov-cards">
                     <div class="markov-row">
                         <div class="markov-row-label">
-                            ✅ Якщо <strong>виконала вчора</strong> —<br />
+                            ✅ Якщо <strong>виконав(ла) вчора</strong> —<br />
                             ймовірність виконати сьогодні
                         </div>
-                        <div class="markov-prob" style="color:#16a34a">@p00%</div>
+                        <div class="markov-prob" style="color:@(noDataYet ? "#9ca3af" : "#16a34a")">
+                            @(noDataYet ? "—" : $"{p00}%")
+                        </div>
                     </div>
                     <div class="markov-row">
                         <div class="markov-row-label">
-                            ❌ Якщо <strong>пропустила вчора</strong> —<br />
+                            ❌ Якщо <strong>пропустив(ла) вчора</strong> —<br />
                             ймовірність виконати сьогодні
                         </div>
-                        <div class="markov-prob" style="color:@(p10 >= 60 ? "#16a34a" : "#f59e0b")">@p10%</div>
+                        <div class="markov-prob" style="color:@(noDataYet ? "#9ca3af" : (p10 >= 60 ? "#16a34a" : "#f59e0b"))">
+                            @(noDataYet ? "—" : $"{p10}%")
+                        </div>
                     </div>
                 </div>
 
                 <div class="markov-stationary">
-                    У довгостроковому темпі ти виконуєш цю звичку приблизно
-                    <strong style="color:#16a34a">@Model.MarkovProbCompleted%</strong> днів.
-                    @if (skipImpactVal > 5)
+                    @if (noDataYet)
                     {
-                        <br />
-                        <span style="color:#6b7280">
-                            Один пропуск знижує шанси на @skipImpactVal.ToString("F0")%.
-                            Намагайся не пропускати двічі поспіль.
-                        </span>
+                        <span>Виконай звичку хоча б 3 рази, щоб побачити паттерни поведінки.</span>
                     }
-                    else if (p10 > p00)
+                    else
                     {
-                        <br />
-                        <span style="color:#6b7280">
-                            Після пропуску ти повертаєшся навіть краще ніж зазвичай. Не засмучуйся!
+                        <span>
+                            У довгостроковому темпі ти виконуєш цю звичку приблизно
+                            <strong style="color:#16a34a">@Model.MarkovProbCompleted%</strong> днів.
                         </span>
+                        if (skipImpactVal > 5)
+                        {
+                            <br />
+                            <span style="color:#6b7280">
+                                Один пропуск знижує шанси на @skipImpactVal.ToString("F0")%.
+                                Намагайся не пропускати двічі поспіль.
+                            </span>
+                        }
+                        else if (p10 > p00)
+                        {
+                            <br />
+                            <span style="color:#6b7280">
+                                Після пропуску ти повертаєшся навіть краще ніж зазвичай. Не засмучуйся!
+                            </span>
+                        }
                     }
                 </div>
+
                 <div class="markov-note">
                     Розраховано на основі @Model.DaysSinceStart днів твоєї поведінки
                 </div>
@@ -970,14 +970,6 @@
                     }
                 });
             }
-        }
-
-        function toggleMath() {
-            const block = document.getElementById('mathDetails');
-            const arrow = document.getElementById('toggleArrow');
-            const isHidden = block.style.display === 'none';
-            block.style.display = isHidden ? 'block' : 'none';
-            arrow.textContent = isHidden ? '▼' : '▶';
         }
     </script>
 

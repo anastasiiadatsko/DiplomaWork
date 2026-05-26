@@ -32,6 +32,12 @@ namespace HabitFlow.DAL.Repositories
                 .Where(l => l.HabitId == habitId)
                 .ToListAsync();
         }
+        public async Task<List<HabitLog>> GetByHabitIdAsync(Guid habitId, Guid userId)
+        {
+            return await context.HabitLogs
+                .Where(l => l.HabitId == habitId && l.UserId == userId)
+                .ToListAsync();
+        }
 
         public async Task<int> GetCompletedCountByUserIdAsync(Guid userId)
         {
@@ -52,5 +58,6 @@ namespace HabitFlow.DAL.Repositories
             context.HabitLogs.Update(log);
             await context.SaveChangesAsync();
         }
+
     }
 }
