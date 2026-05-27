@@ -313,7 +313,7 @@ namespace HabitFlow.Tests
             var ownerId = Guid.NewGuid();
             var friendId = Guid.NewGuid();
             var habitId = Guid.NewGuid();
-            var today = DateTime.UtcNow.Date;
+            var today = DateTime.Today;
 
             var owner = CreateUser(ownerId, "owner@test.com", "Owner");
             var friend = CreateUser(friendId, "friend@test.com", "Friend");
@@ -326,6 +326,7 @@ namespace HabitFlow.Tests
                 HabitId = habitId,
                 UserId = ownerId,
                 IsOwner = true,
+                JoinedAt = today.AddDays(-4),
                 User = owner,
                 Habit = habit,
             });
@@ -335,6 +336,7 @@ namespace HabitFlow.Tests
                 HabitId = habitId,
                 UserId = friendId,
                 IsOwner = false,
+                JoinedAt = today.AddDays(-4),
                 User = friend,
                 Habit = habit,
             });

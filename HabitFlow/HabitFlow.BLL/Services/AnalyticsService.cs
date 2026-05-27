@@ -1,5 +1,6 @@
 ﻿using HabitFlow.BLL.DTOs;
 using HabitFlow.BLL.Interfaces;
+using HabitFlow.Domain.Entities;
 using HabitFlow.Domain.Enums;
 using HabitFlow.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -36,21 +37,27 @@ namespace HabitFlow.BLL.Services
                 return new AnalyticsViewModel();
 
             bool isOwner = habit.UserId == userId;
-            bool isParticipant = false;
+            HabitParticipant? participant = null;
 
             if (!isOwner)
             {
-                var participant = await this.sharedHabitRepository.GetParticipantAsync(habitId, userId);
-                isParticipant = participant != null;
+                participant = await this.sharedHabitRepository.GetParticipantAsync(habitId, userId);
             }
 
-            if (!isOwner && !isParticipant)
+            if (!isOwner && participant == null)
+            {
                 return new AnalyticsViewModel();
-
-            var allLogs = await this.habitLogRepository.GetByHabitIdAsync(habitId, userId);
+            }
 
             var today = DateTime.Today;
             var startDate = habit.StartDate.Date;
+
+            if (!isOwner && participant != null)
+            {
+                startDate = participant.JoinedAt.Date;
+            }
+
+            var allLogs = await this.habitLogRepository.GetByHabitIdAsync(habitId, userId);
 
             var completedDates = allLogs
                 .Where(l => l.UserId == userId && l.Status == LogStatus.Completed)

@@ -139,12 +139,15 @@ namespace HabitFlow.Tests
             Assert.InRange(result.BreakRisk, 0, 100);
         }
 
-        private static AnalyticsService CreateService(Habit habit, List<HabitLog> logs)
+        private static AnalyticsService CreateService(
+    Habit habit,
+    List<HabitLog> logs,
+    HabitParticipant? participant = null)
         {
             return new AnalyticsService(
                 new FakeHabitRepository(habit),
                 new FakeHabitLogRepository(logs),
-                new FakeSharedHabitRepository(),
+                new FakeSharedHabitRepository(participant),
                 NullLogger<AnalyticsService>.Instance);
         }
 
@@ -162,6 +165,52 @@ namespace HabitFlow.Tests
                 CompletedAt = date.Date,
                 Status = LogStatus.Completed,
             };
+        }
+
+        [Fact]
+        public async Task GetHabitAnalyticsAsync_ForParticipant_UsesJoinedAtAsStartDate()
+        {
+            var ownerId = Guid.NewGuid();
+            var participantUserId = Guid.NewGuid();
+            var habitId = Guid.NewGuid();
+
+            var today = DateTime.Today;
+            var habitStartDate = today.AddDays(-20);
+            var joinedAt = today.AddDays(-4);
+
+            var habit = new Habit
+            {
+                Id = habitId,
+                UserId = ownerId,
+                Name = "Shared habit",
+                StartDate = habitStartDate,
+                FrequencyType = FrequencyType.Daily,
+            };
+
+            var participant = new HabitParticipant
+            {
+                Id = Guid.NewGuid(),
+                HabitId = habitId,
+                UserId = participantUserId,
+                IsOwner = false,
+                JoinedAt = joinedAt,
+            };
+
+            var logs = new List<HabitLog>
+    {
+        CreateCompletedLog(habitId, participantUserId, today.AddDays(-3)),
+        CreateCompletedLog(habitId, participantUserId, today.AddDays(-2)),
+        CreateCompletedLog(habitId, participantUserId, today.AddDays(-1)),
+        CreateCompletedLog(habitId, participantUserId, today),
+    };
+
+            var service = CreateService(habit, logs, participant);
+
+            var result = await service.GetHabitAnalyticsAsync(habitId, participantUserId);
+
+            Assert.Equal(5, result.DaysSinceStart);
+            Assert.Equal(4, result.TotalCompleted);
+            Assert.Equal(80, result.ConsistencyRate);
         }
 
         private sealed class FakeHabitRepository : IHabitRepository
@@ -252,6 +301,13 @@ namespace HabitFlow.Tests
 
         private sealed class FakeSharedHabitRepository : ISharedHabitRepository
         {
+            private readonly HabitParticipant? participant;
+
+            public FakeSharedHabitRepository(HabitParticipant? participant = null)
+            {
+                this.participant = participant;
+            }
+
             public Task AddParticipantAsync(HabitParticipant participant)
             {
                 return Task.CompletedTask;
@@ -259,6 +315,13 @@ namespace HabitFlow.Tests
 
             public Task<HabitParticipant?> GetParticipantAsync(Guid habitId, Guid userId)
             {
+                if (this.participant != null &&
+                    this.participant.HabitId == habitId &&
+                    this.participant.UserId == userId)
+                {
+                    return Task.FromResult<HabitParticipant?>(this.participant);
+                }
+
                 return Task.FromResult<HabitParticipant?>(null);
             }
 
@@ -269,7 +332,11 @@ namespace HabitFlow.Tests
 
             public Task<List<HabitParticipant>> GetParticipantsByHabitIdAsync(Guid habitId)
             {
-                return Task.FromResult(new List<HabitParticipant>());
+                var participants = this.participant != null && this.participant.HabitId == habitId
+                    ? new List<HabitParticipant> { this.participant }
+                    : new List<HabitParticipant>();
+
+                return Task.FromResult(participants);
             }
 
             public Task AddInvitationAsync(HabitInvitation invitation)
