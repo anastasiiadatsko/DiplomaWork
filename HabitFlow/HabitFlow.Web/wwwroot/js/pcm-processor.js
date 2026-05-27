@@ -1,5 +1,4 @@
-﻿// Конвертує Float32 мікрофону → Int16 PCM для Gemini
-class PCMProcessor extends AudioWorkletProcessor {
+﻿class PCMProcessor extends AudioWorkletProcessor {
     process(inputs) {
         const input = inputs[0]?.[0];
         if (!input) return true;

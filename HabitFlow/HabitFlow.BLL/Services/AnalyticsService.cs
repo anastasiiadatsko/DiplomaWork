@@ -9,25 +9,42 @@ namespace HabitFlow.BLL.Services
     public class AnalyticsService : IAnalyticsService
     {
         private const int HabitFormationTarget = 66;
+        private const double EwmaAlpha = 0.3;
+        private const double LaplacePseudoCount = 0.5;
 
         private readonly IHabitRepository habitRepository;
         private readonly IHabitLogRepository habitLogRepository;
+        private readonly ISharedHabitRepository sharedHabitRepository;
         private readonly ILogger<AnalyticsService> logger;
 
         public AnalyticsService(
             IHabitRepository habitRepository,
             IHabitLogRepository habitLogRepository,
+            ISharedHabitRepository sharedHabitRepository,
             ILogger<AnalyticsService> logger)
         {
             this.habitRepository = habitRepository;
             this.habitLogRepository = habitLogRepository;
+            this.sharedHabitRepository = sharedHabitRepository;
             this.logger = logger;
         }
 
         public async Task<AnalyticsViewModel> GetHabitAnalyticsAsync(Guid habitId, Guid userId)
         {
             var habit = await this.habitRepository.GetByIdAsync(habitId);
-            if (habit == null || habit.UserId != userId)
+            if (habit == null)
+                return new AnalyticsViewModel();
+
+            bool isOwner = habit.UserId == userId;
+            bool isParticipant = false;
+
+            if (!isOwner)
+            {
+                var participant = await this.sharedHabitRepository.GetParticipantAsync(habitId, userId);
+                isParticipant = participant != null;
+            }
+
+            if (!isOwner && !isParticipant)
                 return new AnalyticsViewModel();
 
             var allLogs = await this.habitLogRepository.GetByHabitIdAsync(habitId, userId);
@@ -64,14 +81,14 @@ namespace HabitFlow.BLL.Services
 
             List<MnkDataPoint> mnkPoints;
             List<MnkDataPoint> trendLine;
-            double a0, a1, a2;
+            double a0, a1, a2, mnkR2;
             int predictedDays;
             DateTime? formationDate;
 
             if (hasEnoughData)
             {
                 mnkPoints = this.BuildMnkPoints(completedDates, startDate);
-                (a0, a1, a2, trendLine) = this.CalculateMnk(mnkPoints, n);
+                (a0, a1, a2, trendLine, mnkR2) = this.CalculateMnk(mnkPoints, n);
 
                 if (alreadyFormed)
                 {
@@ -87,7 +104,7 @@ namespace HabitFlow.BLL.Services
             {
                 mnkPoints = new List<MnkDataPoint>();
                 trendLine = new List<MnkDataPoint>();
-                a0 = a1 = a2 = 0;
+                a0 = a1 = a2 = mnkR2 = 0;
                 predictedDays = 0;
                 formationDate = null;
             }
@@ -105,7 +122,7 @@ namespace HabitFlow.BLL.Services
                 p11 = 1.0 - p10;
                 tomorrowSkipRisk = currentStreak > 0 ? p01 : p11;
                 skipImpact = Math.Round(Math.Max(0, p00 - p10) * 100, 0);
-                double ewma = this.CalcEwma(series, alpha: 0.3);
+                double ewma = this.CalcEwma(series, EwmaAlpha);
                 next7 = this.CalcHybridForecast(series, weekdayStats, p01, p10, ewma);
             }
             else
@@ -133,8 +150,10 @@ namespace HabitFlow.BLL.Services
             }
 
             var (weekdayRisks, optimalDay, riskyDay) = hasEnoughData
-                ? this.CalcMinimax(series)
+                ? this.CalcWeekdayRisk(series)
                 : (new List<WeekdayRisk>(), null, null);
+
+            int recoveryIndex = hasEnoughData ? this.CalcRecoveryIndex(series) : 0;
 
             this.logger.LogInformation("Аналітика для {HabitId}", habitId);
 
@@ -156,6 +175,7 @@ namespace HabitFlow.BLL.Services
                 MnkA0 = Math.Round(a0, 4),
                 MnkA1 = Math.Round(a1, 4),
                 MnkA2 = Math.Round(a2, 4),
+                MnkR2 = Math.Round(mnkR2, 3),
                 PredictedDaysToForm = predictedDays,
                 PredictedFormationDate = formationDate,
                 TransitionMatrix = transMatrix,
@@ -176,6 +196,7 @@ namespace HabitFlow.BLL.Services
                 OptimalDayToAct = optimalDay ?? string.Empty,
                 MostRiskyDay = riskyDay ?? string.Empty,
                 WeekdayStats = weekdayStats,
+                RecoveryIndex = recoveryIndex,
                 MainInsight = this.GenInsight(currentStreak, consistencyRate,
                     tomorrowSkipRisk * 100, totalCompleted, n, hasEnoughData, alreadyFormed),
                 ActionTip = hasEnoughData
@@ -225,12 +246,14 @@ namespace HabitFlow.BLL.Services
         private List<WeekdayStats> CalcWeekdayStats(List<DayRecord> series)
         {
             var names = new[] { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд" };
+
             return Enumerable.Range(0, 7).Select(d =>
             {
                 var dow = (DayOfWeek)((d + 1) % 7);
                 var recs = series.Where(r => r.Date.DayOfWeek == dow).ToList();
                 int total = recs.Count;
                 int done = recs.Count(r => r.Completed);
+
                 return new WeekdayStats
                 {
                     Day = names[d],
@@ -255,10 +278,10 @@ namespace HabitFlow.BLL.Services
                 .ToList();
         }
 
-        private (double a0, double a1, double a2, List<MnkDataPoint> trend)
+        private (double a0, double a1, double a2, List<MnkDataPoint> trend, double r2)
             CalculateMnk(List<MnkDataPoint> pts, int totalDays)
         {
-            if (pts.Count < 3) return (0, 0, 0, new List<MnkDataPoint>());
+            if (pts.Count < 3) return (0, 0, 0, new List<MnkDataPoint>(), 0);
 
             int n = pts.Count;
             double[,] A = new double[n, 3];
@@ -267,7 +290,9 @@ namespace HabitFlow.BLL.Services
             for (int i = 0; i < n; i++)
             {
                 double t = pts[i].Day;
-                A[i, 0] = 1; A[i, 1] = t; A[i, 2] = t * t;
+                A[i, 0] = 1;
+                A[i, 1] = t;
+                A[i, 2] = t * t;
                 b[i] = pts[i].Value;
             }
 
@@ -284,15 +309,26 @@ namespace HabitFlow.BLL.Services
                     Atb[i] += A[k, i] * b[k];
 
             var c = this.GaussElim(AtA, Atb);
-            if (c == null) return (0, 0, 0, new List<MnkDataPoint>());
+            if (c == null) return (0, 0, 0, new List<MnkDataPoint>(), 0);
 
             double a0 = c[0], a1 = c[1], a2 = c[2];
 
-            var trend = new List<MnkDataPoint>();
-            for (int t = 0; t <= totalDays + 30; t += 2)
-                trend.Add(new MnkDataPoint { Day = t, Value = Math.Max(0, a0 + a1 * t + a2 * t * t) });
+            double ssRes = pts.Sum(p => Math.Pow(p.Value - (a0 + a1 * p.Day + a2 * p.Day * p.Day), 2));
+            double mean = pts.Average(p => p.Value);
+            double ssTot = pts.Sum(p => Math.Pow(p.Value - mean, 2));
+            double r2 = ssTot > 1e-10 ? Math.Max(0, 1.0 - ssRes / ssTot) : 0;
 
-            return (a0, a1, a2, trend);
+            var trend = new List<MnkDataPoint>();
+            double prevTrendVal = double.MinValue;
+            for (int t = 0; t <= totalDays + 30; t += 2)
+            {
+                double val = Math.Max(0, a0 + a1 * t + a2 * t * t);
+                if (val < prevTrendVal) break;
+                trend.Add(new MnkDataPoint { Day = t, Value = val });
+                prevTrendVal = val;
+            }
+
+            return (a0, a1, a2, trend, r2);
         }
 
         private double[]? GaussElim(double[,] M, double[] v)
@@ -311,9 +347,14 @@ namespace HabitFlow.BLL.Services
                     (m[col, k], m[mx, k]) = (m[mx, k], m[col, k]);
                 (r[col], r[mx]) = (r[mx], r[col]);
 
+                if (Math.Abs(m[col, col]) < 1e-10)
+                {
+                    this.logger.LogWarning("GaussElim: вироджена матриця на стовпці {Col}.", col);
+                    return null;
+                }
+
                 for (int row = col + 1; row < n; row++)
                 {
-                    if (Math.Abs(m[col, col]) < 1e-10) continue;
                     double f = m[row, col] / m[col, col];
                     for (int k = col; k < n; k++) m[row, k] -= f * m[col, k];
                     r[row] -= f * r[col];
@@ -325,11 +366,13 @@ namespace HabitFlow.BLL.Services
             {
                 res[i] = r[i];
                 for (int j = i + 1; j < n; j++) res[i] -= m[i, j] * res[j];
+
                 if (Math.Abs(m[i, i]) < 1e-10)
                 {
-                    this.logger.LogWarning("GaussElim: вироджена матриця на рядку {Row}", i);
+                    this.logger.LogWarning("GaussElim: вироджена матриця на рядку {Row}.", i);
                     return null;
                 }
+
                 res[i] /= m[i, i];
             }
 
@@ -341,19 +384,20 @@ namespace HabitFlow.BLL.Services
             double curVal = a0 + a1 * cur + a2 * cur * cur;
             if (curVal >= HabitFormationTarget) return (0, null);
 
-            double vertex = a2 != 0 ? -a1 / (2 * a2) : double.MaxValue;
-            bool trendWillPeak = a2 < 0 && vertex <= cur;
-            if (trendWillPeak) return (0, null);
+            if (a2 < 0)
+            {
+                double vertex = -a1 / (2 * a2);
+                if (vertex <= cur) return (0, null);
+            }
 
             if (a1 <= 0 && a2 <= 0) return (0, null);
 
+            double prevVal = curVal;
             for (int t = cur + 1; t <= 730; t++)
             {
                 double val = a0 + a1 * t + a2 * t * t;
-
-                if (a2 < 0 && val < curVal)
-                    return (0, null);
-
+                if (val < prevVal) return (0, null);
+                prevVal = val;
                 if (val >= HabitFormationTarget)
                     return (t - cur, DateTime.Today.AddDays(t - cur));
             }
@@ -375,17 +419,30 @@ namespace HabitFlow.BLL.Services
                 else t11++;
             }
 
-            double r0 = t00 + t01, r1 = t10 + t11;
+            double r0 = t00 + t01;
+            double r1 = t10 + t11;
 
             var mx = new double[][]
             {
-                new[] { r0 > 0 ? t00 / r0 : 0.7, r0 > 0 ? t01 / r0 : 0.3 },
-                new[] { r1 > 0 ? t10 / r1 : 0.4, r1 > 0 ? t11 / r1 : 0.6 },
+                new[]
+                {
+                    (t00 + LaplacePseudoCount) / (r0 + 2 * LaplacePseudoCount),
+                    (t01 + LaplacePseudoCount) / (r0 + 2 * LaplacePseudoCount),
+                },
+                new[]
+                {
+                    (t10 + LaplacePseudoCount) / (r1 + 2 * LaplacePseudoCount),
+                    (t11 + LaplacePseudoCount) / (r1 + 2 * LaplacePseudoCount),
+                },
             };
 
-            double p01v = mx[0][1], p10v = mx[1][0];
+            double p01v = mx[0][1];
+            double p10v = mx[1][0];
             double den = p01v + p10v;
-            double[] stat = den > 0 ? new[] { p10v / den, p01v / den } : new[] { 0.6, 0.4 };
+
+            double[] stat = den > 1e-10
+                ? new[] { p10v / den, p01v / den }
+                : new[] { 0.6, 0.4 };
 
             return (mx, stat, p01v, p10v);
         }
@@ -402,7 +459,9 @@ namespace HabitFlow.BLL.Services
         private List<double> CalcHybridForecast(
             List<DayRecord> series,
             List<WeekdayStats> weekdayStats,
-            double p01, double p10, double ewma)
+            double p01,
+            double p10,
+            double ewma)
         {
             if (series.Count < 7)
                 return Enumerable.Repeat(Math.Round(ewma * 100, 1), 7).ToList();
@@ -413,6 +472,7 @@ namespace HabitFlow.BLL.Services
 
             var dayNames = new[] { "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд" };
             var dowRates = new Dictionary<DayOfWeek, double>();
+
             for (int d = 0; d < 7; d++)
             {
                 var dow = (DayOfWeek)((d + 1) % 7);
@@ -450,10 +510,10 @@ namespace HabitFlow.BLL.Services
             double stabilityScore = Math.Clamp(1 - volatility / 7.0, 0, 1);
             double volumeScore = Math.Clamp(totalCompleted / (double)HabitFormationTarget, 0, 1);
 
-            double alpha = 0.30;
-            double beta = 0.30;
-            double gamma = 0.25;
-            double delta = 0.15;
+            const double alpha = 0.30;
+            const double beta = 0.30;
+            const double gamma = 0.25;
+            const double delta = 0.15;
 
             double raw =
                 alpha * streakScore +
@@ -468,7 +528,7 @@ namespace HabitFlow.BLL.Services
         }
 
         private (List<WeekdayRisk> risks, string optimal, string risky)
-            CalcMinimax(List<DayRecord> series)
+            CalcWeekdayRisk(List<DayRecord> series)
         {
             var names = new[]
             {
@@ -482,6 +542,7 @@ namespace HabitFlow.BLL.Services
                 var recs = series.Where(r => r.Date.DayOfWeek == dow).ToList();
                 int total = recs.Count;
                 int done = recs.Count(r => r.Completed);
+
                 double cr = total > 0 ? (double)done / total : 0.0;
                 double fail = 1.0 - cr;
                 double baseR = dow is DayOfWeek.Saturday or DayOfWeek.Sunday ? 0.35
@@ -498,9 +559,36 @@ namespace HabitFlow.BLL.Services
                 };
             }).ToList();
 
-            return (risks,
+            return (
+                risks,
                 risks.OrderBy(r => r.RiskScore).First().DayName,
-                risks.OrderByDescending(r => r.RiskScore).First().DayName);
+                risks.OrderByDescending(r => r.RiskScore).First().DayName
+            );
+        }
+
+        private int CalcRecoveryIndex(List<DayRecord> series)
+        {
+            var gaps = new List<int>();
+            int missStreak = 0;
+
+            foreach (var day in series)
+            {
+                if (!day.Completed)
+                {
+                    missStreak++;
+                }
+                else
+                {
+                    if (missStreak > 0)
+                    {
+                        gaps.Add(missStreak);
+                        missStreak = 0;
+                    }
+                }
+            }
+
+            if (gaps.Count == 0) return 0;
+            return (int)Math.Round(gaps.Average());
         }
 
         private List<DailyLogPoint> BuildDailyLogs(List<DayRecord> series)
@@ -509,17 +597,23 @@ namespace HabitFlow.BLL.Services
             return series.Select(r =>
             {
                 streak = r.Completed ? streak + 1 : 0;
-                return new DailyLogPoint { Date = r.Date, Completed = r.Completed, CumulativeStreak = streak };
+                return new DailyLogPoint
+                {
+                    Date = r.Date,
+                    Completed = r.Completed,
+                    CumulativeStreak = streak,
+                };
             }).ToList();
         }
 
-        private string GenInsight(int streak, double consistency,
-            double skipRiskPct, int total, int days, bool hasEnoughData, bool alreadyFormed)
+        private string GenInsight(
+            int streak, double consistency, double skipRiskPct,
+            int total, int days, bool hasEnoughData, bool alreadyFormed)
         {
             if (!hasEnoughData)
                 return $"Ти щойно починаєш! Виконай звичку ще {Math.Max(0, 3 - total)} рази — і перші прогнози будуть готові.";
             if (alreadyFormed)
-                return $"Звичка повністю сформована! {total} виконань — мозок уже працює на автопілоті.";
+                return $"Звичка повністю сформована! {total} виконань — мозок вже працює на автопілоті.";
             if (consistency >= 80 && streak >= 5)
                 return $"Ти на підйомі! {streak} днів поспіль і {consistency}% — звичка майже автоматична.";
             if (streak >= 14)
@@ -532,10 +626,12 @@ namespace HabitFlow.BLL.Services
                 return "Поки важко — але ти продовжуєш. Кожен день рахується.";
             if (total >= 21)
                 return $"Ти вже виконував(ла) цю звичку {total} разів — мозок запам'ятовує паттерн.";
+
             return $"Стабільний прогрес за {days} днів. Продовжуй у тому ж темпі.";
         }
 
-        private string GenTip(List<WeekdayRisk> risks, double skipRiskPct,
+        private string GenTip(
+            List<WeekdayRisk> risks, double skipRiskPct,
             int streak, double consistency, bool alreadyFormed)
         {
             if (alreadyFormed)
