@@ -144,6 +144,7 @@ namespace HabitFlow.Tests
             return new AnalyticsService(
                 new FakeHabitRepository(habit),
                 new FakeHabitLogRepository(logs),
+                new FakeSharedHabitRepository(),
                 NullLogger<AnalyticsService>.Instance);
         }
 
@@ -248,6 +249,50 @@ namespace HabitFlow.Tests
                 return Task.CompletedTask;
             }
         }
+
+        private sealed class FakeSharedHabitRepository : ISharedHabitRepository
+        {
+            public Task AddParticipantAsync(HabitParticipant participant)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task<HabitParticipant?> GetParticipantAsync(Guid habitId, Guid userId)
+            {
+                return Task.FromResult<HabitParticipant?>(null);
+            }
+
+            public Task<List<Habit>> GetSharedHabitsByUserIdAsync(Guid userId)
+            {
+                return Task.FromResult(new List<Habit>());
+            }
+
+            public Task<List<HabitParticipant>> GetParticipantsByHabitIdAsync(Guid habitId)
+            {
+                return Task.FromResult(new List<HabitParticipant>());
+            }
+
+            public Task AddInvitationAsync(HabitInvitation invitation)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task<HabitInvitation?> GetInvitationByTokenAsync(string token)
+            {
+                return Task.FromResult<HabitInvitation?>(null);
+            }
+
+            public Task<HabitInvitation?> GetPendingInvitationAsync(Guid habitId, Guid inviteeUserId)
+            {
+                return Task.FromResult<HabitInvitation?>(null);
+            }
+
+            public Task UpdateInvitationAsync(HabitInvitation invitation)
+            {
+                return Task.CompletedTask;
+            }
+        }
+
         [Fact]
         public async Task GetHabitAnalyticsAsync_IgnoresSkippedLogs()
         {
