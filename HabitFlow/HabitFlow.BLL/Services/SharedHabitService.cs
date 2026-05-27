@@ -233,19 +233,35 @@ namespace HabitFlow.BLL.Services
                 .GetParticipantsByHabitIdAsync(habitId);
 
             var logs = await this.habitLogRepository.GetByHabitIdAsync(habitId);
-            var today = DateTime.UtcNow.Date;
-            var daysSinceStart = Math.Max(1, (today - habit.StartDate.Date).Days + 1);
+            var today = DateTime.Today;
 
             return participants
                 .Select(p =>
                 {
+                    var participantStartDate = p.IsOwner
+    ? habit.StartDate.Date
+    : p.JoinedAt.Date;
+
+                    var daysSinceStart = Math.Max(1, (today - participantStartDate).Days + 1);
+
                     var userLogs = logs
-                        .Where(l => l.UserId == p.UserId && l.Status == LogStatus.Completed)
+                        .Where(l =>
+                            l.UserId == p.UserId &&
+                            l.Status == LogStatus.Completed &&
+                            l.ScheduledDate.Date >= participantStartDate &&
+                            l.ScheduledDate.Date <= today)
                         .ToList();
 
                     var completedDates = userLogs
                         .Select(l => l.ScheduledDate.Date)
+                        .Distinct()
                         .ToHashSet();
+
+                    var totalCompleted = completedDates.Count;
+
+                    var consistencyRate = Math.Round(
+                        Math.Min(100.0, totalCompleted * 100.0 / daysSinceStart),
+                        1);
 
                     return new SharedHabitParticipantProgressDto
                     {
@@ -255,8 +271,8 @@ namespace HabitFlow.BLL.Services
                         IsOwner = p.IsOwner,
                         IsCompletedToday = completedDates.Contains(today),
                         CurrentStreak = this.CalculateCurrentStreak(completedDates, today),
-                        TotalCompleted = userLogs.Count,
-                        ConsistencyRate = Math.Round(userLogs.Count * 100.0 / daysSinceStart, 1),
+                        TotalCompleted = totalCompleted,
+                        ConsistencyRate = consistencyRate,
                     };
                 })
                 .OrderByDescending(p => p.IsOwner)
@@ -267,7 +283,10 @@ namespace HabitFlow.BLL.Services
         private int CalculateCurrentStreak(HashSet<DateTime> completedDates, DateTime today)
         {
             var streak = 0;
-            var date = today;
+
+            var date = completedDates.Contains(today)
+                ? today
+                : today.AddDays(-1);
 
             while (completedDates.Contains(date))
             {
