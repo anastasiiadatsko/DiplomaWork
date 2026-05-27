@@ -16,21 +16,87 @@
         }
 
         .navbar {
-            background: white !important;
+            background: white;
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
             box-shadow: 0 1px 8px rgba(0,0,0,0.06);
-            padding: 12px 24px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        .navbar-brand {
+        .logo {
             font-size: 20px;
             font-weight: 700;
-            color: #16a34a !important;
+            color: #16a34a;
+            text-decoration: none;
+        }
+
+            .logo:hover {
+                color: #16a34a;
+            }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            align-items: center;
         }
 
         .nav-link {
             font-size: 14px;
-            font-weight: 500;
             color: #374151 !important;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 7px 14px;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+
+            .nav-link:hover {
+                background: #f3f4f6;
+                color: #374151 !important;
+            }
+
+            .nav-link.active {
+                background: #dcfce7;
+                color: #16a34a !important;
+            }
+
+        .btn-logout {
+            padding: 8px 16px;
+            background: #f3f4f6;
+            color: #374151 !important;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+            .btn-logout:hover {
+                background: #e5e7eb;
+                color: #374151 !important;
+            }
+
+        .btn-register {
+            background: #16a34a;
+            color: white !important;
+            border-radius: 8px;
+            padding: 8px 18px !important;
+            font-weight: 600 !important;
+        }
+
+            .btn-register:hover {
+                background: #15803d;
+            }
+
+        .btn-login {
+            border: 1.5px solid #16a34a;
+            color: #16a34a !important;
+            border-radius: 8px;
+            padding: 7px 18px !important;
+            font-weight: 600 !important;
         }
 
         .btn-register {
@@ -54,112 +120,77 @@
         }
 
         .btn-logout {
+            padding: 8px 16px !important;
             background: #f3f4f6;
             color: #374151 !important;
             border-radius: 8px;
-            padding: 8px 16px !important;
             font-size: 13px;
             font-weight: 500;
-        }
-
-        .avatar {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            object-fit: cover;
+            text-decoration: none;
         }
 
         .profile-link {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
         }
+
     </style>
 </head>
 
 <body>
     @Html.AntiForgeryToken()
     <header>
-        <nav class="navbar navbar-expand-sm navbar-light">
-            <div class="container-fluid">
+        <nav class="navbar">
+            <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
 
-                <a class="navbar-brand" asp-controller="Home" asp-action="Index">
-                    HabitFlow
-                </a>
+            <div class="nav-links">
+                @if (Context.Session.GetString("UserId") != null)
+                {
+                    <a asp-controller="Dashboard"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")">
+                        🏠 Дошка звичок
+                    </a>
 
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
+                    <a asp-controller="Habit"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Habit" ? "active" : "")">
+                        📋 Мої звички
+                    </a>
 
-                <div class="collapse navbar-collapse" id="navbarNav">
+                    <a asp-controller="BalanceConstellation"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "BalanceConstellation" ? "active" : "")">
+                        ✨ Сузір’я балансу
+                    </a>
 
-                    <ul class="navbar-nav ms-auto align-items-center gap-2">
+                    <a asp-controller="Profile"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Profile" ? "active" : "")">
+                        👤 @Context.Session.GetString("UserName")
+                    </a>
 
-                        @if (Context.Session.GetString("UserId") != null)
-                        {
-                            <!-- DASHBOARD -->
-                            <li class="nav-item">
-                                <a class="nav-link"
-                                   asp-controller="Dashboard"
-                                   asp-action="Index">
-                                    🏠 Дашборд
-                                </a>
-                            </li>
+                    <a asp-controller="Auth"
+                       asp-action="Logout"
+                       class="btn-logout">
+                        Вийти
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="Auth"
+                       asp-action="Login"
+                       class="nav-link btn-login">
+                        Увійти
+                    </a>
 
-                            <!-- HABITS -->
-                            <li class="nav-item">
-                                <a class="nav-link"
-                                   asp-controller="Habit"
-                                   asp-action="Index">
-                                    📋 Мої звички
-                                </a>
-                            </li>
-
-                            <!-- PROFILE -->
-                            <li class="nav-item">
-                                <a class="nav-link profile-link"
-                                   asp-controller="Profile"
-                                   asp-action="Index">
-
-                                    <img src="/images/default-avatar.png"
-                                         class="avatar" />
-
-                                    <span>@Context.Session.GetString("UserName")</span>
-                                </a>
-                            </li>
-
-                            <!-- LOGOUT -->
-                            <li class="nav-item">
-                                <a class="nav-link btn-logout"
-                                   asp-controller="Auth"
-                                   asp-action="Logout">
-                                    Вийти
-                                </a>
-                            </li>
-                        }
-                        else
-                        {
-                            <!-- LOGIN -->
-                            <li class="nav-item">
-                                <a class="nav-link btn-login"
-                                   asp-controller="Auth"
-                                   asp-action="Login">
-                                    Увійти
-                                </a>
-                            </li>
-
-                            <!-- REGISTER -->
-                            <li class="nav-item">
-                                <a class="nav-link btn-register"
-                                   asp-controller="Auth"
-                                   asp-action="Register">
-                                    Зареєструватись
-                                </a>
-                            </li>
-                        }
-
-                    </ul>
-                </div>
+                    <a asp-controller="Auth"
+                       asp-action="Register"
+                       class="nav-link btn-register">
+                        Зареєструватись
+                    </a>
+                }
             </div>
         </nav>
     </header>
