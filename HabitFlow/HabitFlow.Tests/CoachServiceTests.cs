@@ -315,7 +315,7 @@ namespace HabitFlow.Tests
             Assert.False(string.IsNullOrWhiteSpace(result.Advice));
             Assert.Equal(3, result.ActionItems.Count);
             Assert.False(string.IsNullOrWhiteSpace(result.Motivation));
-            Assert.Contains("87.5", result.Advice);
+            Assert.True(result.Advice.Contains("87.5") || result.Advice.Contains("87,5"));
         }
 
         [Fact]
