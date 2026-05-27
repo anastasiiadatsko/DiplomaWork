@@ -127,7 +127,6 @@ namespace HabitFlow.Web.Controllers
                 return;
             }
 
-            // Голосова модель — окремий ключ конфігу, щоб не плутати з текстовою
             var voiceModel = _configuration["Gemini:VoiceModel"]
                 ?? "models/gemini-2.5-flash-native-audio-latest";
             _logger.LogInformation("VoiceStream: voiceModel={M}", voiceModel);
@@ -173,7 +172,7 @@ namespace HabitFlow.Web.Controllers
                     {
                         parts = new[] { new {
                             text =
-                                "Ти — персональний коуч з формування звичок у застосунку HabitFlow. " +
+                                "Ти — персональний агент з формування звичок у застосунку HabitFlow. " +
                                 "Завжди говори тільки українською мовою. " +
                                 "Будь теплим, конкретним і підтримуючим. " +
                                 "Допомагай аналізувати прогрес, долати перешкоди і будувати стійкі звички."
@@ -196,7 +195,6 @@ namespace HabitFlow.Web.Controllers
                 return;
             }
 
-            // Читаємо setupComplete — збираємо повне повідомлення
             try
             {
                 var fullMessage = await ReceiveFullMessageAsync(geminiWs, CancellationToken.None,
@@ -264,10 +262,6 @@ namespace HabitFlow.Web.Controllers
             }
         }
 
-        /// <summary>
-        /// Збирає всі WebSocket-фрейми до EndOfMessage і повертає повний буфер.
-        /// Повертає null якщо з'єднання закрито або стан не Open після отримання.
-        /// </summary>
         private async Task<byte[]?> ReceiveFullMessageAsync(
             WebSocket ws,
             CancellationToken ct,
