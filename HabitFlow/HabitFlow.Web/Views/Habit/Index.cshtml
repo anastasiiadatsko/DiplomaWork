@@ -345,6 +345,7 @@
             <a asp-controller="Dashboard" asp-action="Index" class="nav-link">🏠 Дошка звичок</a>
             <a asp-controller="Habit" asp-action="Index" class="nav-link active">📋 Мої звички</a>
             <a asp-controller="BalanceConstellation" asp-action="Index" class="nav-link">✨ Сузір’я балансу</a>
+            <a asp-controller="Coach" asp-action="Index" class="nav-link">🤖 Агент</a>
             <a asp-controller="Profile" asp-action="Index" class="nav-link">👤 Профіль</a>
             <a asp-controller="Auth" asp-action="Logout" class="btn-logout">Вийти</a>
         </div>
@@ -355,6 +356,12 @@
         @if (TempData["Success"] != null)
         {
             <div class="toast toast-success">✓ @TempData["Success"]</div>
+        }
+        @if (TempData["Error"] != null)
+        {
+            <div class="toast" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca">
+                ⚠ @TempData["Error"]
+            </div>
         }
 
         <div class="page-header">
@@ -473,6 +480,18 @@
                                    asp-route-habitId="@habit.Id"
                                    class="action-btn"
                                    style="background:#dcfce7;color:#15803d">👥</a>
+                            }
+
+                            @if (habit.ReminderTime.HasValue)
+                            {
+                                <a asp-controller="Habit"
+                                   asp-action="AddToGoogleCalendar"
+                                   asp-route-id="@habit.Id"
+                                   class="action-btn"
+                                   target="_blank"
+                                   style="background:#dbeafe;color:#1d4ed8">
+                                    📅
+                                </a>
                             }
 
                             <a asp-controller="Analytics" asp-action="Index"

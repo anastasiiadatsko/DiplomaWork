@@ -41,6 +41,8 @@ builder.Services.AddScoped<ISharedHabitRepository, SharedHabitRepository>();
 
 builder.Configuration.AddUserSecrets<Program>();
 
+builder.Services.AddHttpClient<IGoogleCalendarService, GoogleCalendarService>();
+
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
 {

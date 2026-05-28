@@ -33,5 +33,9 @@ namespace HabitFlow.BLL.DTOs
         public bool IsOwner { get; set; }
 
         public int ParticipantsCount { get; set; }
+
+        public TimeOnly? ReminderTime { get; set; }
+
+        public bool IsGoogleCalendarReminderEnabled { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using System;
 using HabitFlow.DAL.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace HabitFlow.DAL.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260528104857_AddGoogleCalendarTokens")]
+    partial class AddGoogleCalendarTokens
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -45,22 +48,13 @@ namespace HabitFlow.DAL.Migrations
                     b.Property<int>("FrequencyType")
                         .HasColumnType("integer");
 
-                    b.Property<string>("GoogleCalendarEventId")
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsActive")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsGoogleCalendarReminderEnabled")
                         .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
-
-                    b.Property<TimeOnly?>("ReminderTime")
-                        .HasColumnType("time without time zone");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("timestamp with time zone");
@@ -238,19 +232,7 @@ namespace HabitFlow.DAL.Migrations
                     b.Property<string>("EmailConfirmationToken")
                         .HasColumnType("text");
 
-                    b.Property<string>("GoogleCalendarAccessToken")
-                        .HasColumnType("text");
-
-                    b.Property<string>("GoogleCalendarRefreshToken")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime?>("GoogleCalendarTokenExpiresAt")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<bool>("IsEmailConfirmed")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("IsGoogleCalendarConnected")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsOnboardingCompleted")

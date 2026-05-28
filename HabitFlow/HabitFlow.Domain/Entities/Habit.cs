@@ -35,5 +35,11 @@ namespace HabitFlow.Domain.Entities
         public ICollection<HabitParticipant> Participants { get; set; } = new List<HabitParticipant>();
 
         public ICollection<HabitInvitation> Invitations { get; set; } = new List<HabitInvitation>();
+
+        public TimeOnly? ReminderTime { get; set; }
+
+        public bool IsGoogleCalendarReminderEnabled { get; set; }
+
+        public string? GoogleCalendarEventId { get; set; }
     }
 }

@@ -11,17 +11,42 @@ namespace HabitFlow.Web.Controllers
     public class CoachController : Controller
     {
         private readonly ICoachService coachService;
+        private readonly IHabitService habitService;
         private readonly IConfiguration _configuration;
         private readonly ILogger<CoachController> _logger;
 
         public CoachController(
             ICoachService coachService,
+            IHabitService habitService,
             IConfiguration configuration,
             ILogger<CoachController> logger)
         {
             this.coachService = coachService;
+            this.habitService = habitService;
             _configuration = configuration;
             _logger = logger;
+        }
+
+        [HttpGet("")]
+        public async Task<IActionResult> Index()
+        {
+            var userId = GetUserIdValue();
+
+            if (userId == null)
+            {
+                return this.RedirectToAction("Login", "Auth");
+            }
+
+            var habits = await this.habitService.GetAllHabitsAsync(userId.Value);
+            var firstHabit = habits.FirstOrDefault(h => h.IsActive) ?? habits.FirstOrDefault();
+
+            if (firstHabit == null)
+            {
+                this.TempData["Error"] = "Щоб відкрити AI-агента, спочатку створи хоча б одну звичку.";
+                return this.RedirectToAction("Create", "Habit");
+            }
+
+            return this.RedirectToAction("Session", "Coach", new { habitId = firstHabit.Id });
         }
 
         [HttpGet("Session/{habitId:guid}")]

@@ -14,17 +14,20 @@ namespace HabitFlow.BLL.Services
         private readonly IHabitLogRepository habitLogRepository;
         private readonly ILogger<HabitService> logger;
         private readonly ISharedHabitRepository sharedHabitRepository;
+        private readonly IGoogleCalendarService googleCalendarService;
 
         public HabitService(
     IHabitRepository habitRepository,
     IHabitLogRepository habitLogRepository,
     ISharedHabitRepository sharedHabitRepository,
-    ILogger<HabitService> logger)
+    ILogger<HabitService> logger,
+    IGoogleCalendarService googleCalendarService)
         {
             this.habitRepository = habitRepository;
             this.habitLogRepository = habitLogRepository;
             this.sharedHabitRepository = sharedHabitRepository;
             this.logger = logger;
+            this.googleCalendarService = googleCalendarService;
         }
 
         private static DateTime UtcDate(DateTime dt)
@@ -131,12 +134,33 @@ namespace HabitFlow.BLL.Services
                 FrequencyType = dto.FrequencyType,
                 TargetDaysJson = JsonSerializer.Serialize(dto.TargetDays),
                 Color = dto.Color,
+                ReminderTime = dto.ReminderTime,
+                IsGoogleCalendarReminderEnabled = dto.AddToGoogleCalendar,
                 StartDate = UtcDate(DateTime.Today),
                 IsActive = true,
                 CreatedAt = DateTime.UtcNow,
             };
 
             await this.habitRepository.AddAsync(habit);
+
+            if (dto.AddToGoogleCalendar && dto.ReminderTime.HasValue)
+            {
+                var calendarCreated = await this.googleCalendarService.CreateHabitReminderEventAsync(
+    userId,
+    dto.Name,
+    DateTime.Today,
+    dto.ReminderTime.Value,
+    dto.FrequencyType,
+    dto.TargetDays);
+
+                if (!calendarCreated)
+                {
+                    this.logger.LogWarning(
+                        "Не вдалося створити подію Google Calendar для звички {HabitId}",
+                        habit.Id);
+                }
+            }
+
             this.logger.LogInformation("Звичка створена: {Name} для {UserId}", dto.Name, userId);
 
             return habit.Id;
@@ -408,6 +432,8 @@ namespace HabitFlow.BLL.Services
                 FrequencyType = habit.FrequencyType,
                 TargetDays = targetDays,
                 Color = habit.Color,
+                ReminderTime = habit.ReminderTime,
+                IsGoogleCalendarReminderEnabled = habit.IsGoogleCalendarReminderEnabled,
                 IsCompletedToday = isCompletedToday,
                 CurrentStreak = this.CalculateStreak(completedLogs),
                 ConsistencyRate = this.CalculateConsistencyRate(habit, completedLogs),

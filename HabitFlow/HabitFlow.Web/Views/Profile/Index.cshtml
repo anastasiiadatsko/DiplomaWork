@@ -863,6 +863,50 @@
         </section>
 
         <section class="card">
+            <div class="title">Google Calendar</div>
+
+            @if (Model.User.IsGoogleCalendarConnected)
+            {
+                <div class="goal-box">
+                    <div class="goal-icon">📅</div>
+
+                    <div>
+                        <div class="goal-name">Google Calendar підключено</div>
+                        <div class="goal-time">
+                            Тепер HabitFlow може створювати нагадування для звичок у твоєму календарі.
+                        </div>
+                    </div>
+                </div>
+
+                <form asp-controller="GoogleCalendar"
+                      asp-action="Disconnect"
+                      method="post">
+                    @Html.AntiForgeryToken()
+
+                    <button type="submit" class="button button-danger">
+                        Відключити Google Calendar
+                    </button>
+                </form>
+            }
+            else
+            {
+                <div class="empty">
+                    <div class="empty-icon">📅</div>
+                    <div class="empty-title">Google Calendar ще не підключено</div>
+                    <div class="empty-text">
+                        Підключи календар, щоб створювати нагадування для виконання звичок.
+                    </div>
+
+                    <a asp-controller="GoogleCalendar"
+                       asp-action="Connect"
+                       class="button">
+                        Підключити Google Calendar
+                    </a>
+                </div>
+            }
+        </section>
+
+        <section class="card">
             <div class="title">Редагувати профіль</div>
 
             <form asp-controller="Profile" asp-action="EditProfile" method="post" class="form-grid">

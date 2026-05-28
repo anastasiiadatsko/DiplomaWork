@@ -9,13 +9,16 @@ namespace HabitFlow.Web.Controllers
     {
         private readonly IHabitService habitService;
         private readonly ISharedHabitService sharedHabitService;
+        private readonly IGoogleCalendarService googleCalendarService;
 
         public HabitController(
             IHabitService habitService,
-            ISharedHabitService sharedHabitService)
+            ISharedHabitService sharedHabitService,
+            IGoogleCalendarService googleCalendarService)
         {
             this.habitService = habitService;
             this.sharedHabitService = sharedHabitService;
+            this.googleCalendarService = googleCalendarService;
         }
 
         private Guid? CurrentUserId
@@ -240,6 +243,38 @@ namespace HabitFlow.Web.Controllers
             this.TempData["Success"] = $"Додано {days} днів виконання!";
 
             return this.RedirectToAction("ManualLog", new { habitId });
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> AddToGoogleCalendar(Guid id)
+        {
+            if (this.CurrentUserId == null)
+            {
+                return this.RedirectToAction("Login", "Auth");
+            }
+
+            var habit = await this.habitService.GetByIdAsync(id, this.CurrentUserId.Value);
+
+            if (habit == null)
+            {
+                return this.NotFound();
+            }
+
+            if (!habit.ReminderTime.HasValue)
+            {
+                this.TempData["Error"] = "Для цієї звички не вказано час нагадування.";
+                return this.RedirectToAction("Index");
+            }
+
+            var url = this.googleCalendarService.BuildGoogleCalendarTemplateUrl(
+                habit.Name,
+                habit.Description,
+                DateTime.Today,
+                habit.ReminderTime.Value,
+                habit.FrequencyType,
+                habit.TargetDays);
+
+            return this.Redirect(url);
         }
 
         [HttpPost]

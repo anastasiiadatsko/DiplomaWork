@@ -455,6 +455,29 @@
                     </div>
                 </div>
 
+                <hr class="divider" />
+
+                <!-- GOOGLE CALENDAR REMINDER -->
+                <div class="form-group">
+                    <label class="form-label" asp-for="ReminderTime">Час нагадування</label>
+                    <input asp-for="ReminderTime"
+                           type="text"
+                           class="form-input"
+                           placeholder="Наприклад: 14:30"
+                           pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$"
+                           title="Введіть час у 24-годинному форматі, наприклад 09:30 або 18:45" />
+                    <span asp-validation-for="ReminderTime" class="error-msg"></span>
+                </div>
+
+                <div class="form-group">
+                    <label style="display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:0; font-size:14px;">
+                        <input asp-for="AddToGoogleCalendar"
+                               type="checkbox"
+                               style="width:auto;" />
+                        Додати нагадування в Google Calendar
+                    </label>
+                </div>
+
                 <!-- PREVIEW -->
                 <div class="preview-card" id="preview">
                     <div class="preview-bar" id="previewBar" style="background:#16a34a"></div>
@@ -467,7 +490,7 @@
                 <div class="form-actions">
                     <a asp-controller="Habit" asp-action="Index" class="btn-cancel">Скасувати</a>
                     <div class="form-group">
-                        <label asp-for="FriendEmail">Email друга для спільної звички</label>
+                        <label asp-for="FriendEmail">Електронна пошта друга для спільної звички</label>
                         <input asp-for="FriendEmail"
                                type="email"
                                placeholder="friend@email.com" />
