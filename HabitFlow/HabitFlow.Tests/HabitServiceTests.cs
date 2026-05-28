@@ -5,6 +5,7 @@ using HabitFlow.Domain.Enums;
 using HabitFlow.Domain.Interfaces;
 using Microsoft.Extensions.Logging.Abstractions;
 using static System.Reflection.Metadata.BlobBuilder;
+using HabitFlow.BLL.Interfaces;
 
 namespace HabitFlow.Tests
 {
@@ -154,14 +155,15 @@ namespace HabitFlow.Tests
         }
 
         private static HabitService CreateService(
-            Habit habit,
-            FakeHabitLogRepository logRepository)
+    Habit habit,
+    FakeHabitLogRepository logRepository)
         {
             return new HabitService(
                 new FakeHabitRepository(habit),
                 logRepository,
                 new FakeSharedHabitRepository(),
-                NullLogger<HabitService>.Instance);
+                NullLogger<HabitService>.Instance,
+                new FakeGoogleCalendarService());
         }
 
         private static Habit CreateHabit(Guid habitId, Guid userId, DateTime startDate)
@@ -321,6 +323,46 @@ namespace HabitFlow.Tests
             public Task UpdateInvitationAsync(HabitInvitation invitation)
             {
                 return Task.CompletedTask;
+            }
+        }
+
+        private sealed class FakeGoogleCalendarService : IGoogleCalendarService
+        {
+            public string BuildAuthorizationUrl(Guid userId)
+            {
+                return "https://test.google.com";
+            }
+
+            public Task<bool> HandleCallbackAsync(Guid userId, string code)
+            {
+                return Task.FromResult(true);
+            }
+
+            public Task<bool> DisconnectAsync(Guid userId)
+            {
+                return Task.FromResult(true);
+            }
+
+            public Task<bool> CreateHabitReminderEventAsync(
+    Guid userId,
+    string habitName,
+    DateTime date,
+    TimeOnly reminderTime,
+    FrequencyType frequencyType,
+    List<DayOfWeek> targetDays)
+            {
+                return Task.FromResult(true);
+            }
+
+            public string BuildGoogleCalendarTemplateUrl(
+    string habitName,
+    string? description,
+    DateTime date,
+    TimeOnly reminderTime,
+    FrequencyType frequencyType,
+    List<DayOfWeek> targetDays)
+            {
+                return "https://calendar.google.com/calendar/render?action=TEMPLATE";
             }
         }
     }

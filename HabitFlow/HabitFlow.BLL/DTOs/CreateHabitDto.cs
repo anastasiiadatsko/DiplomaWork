@@ -23,5 +23,7 @@ namespace HabitFlow.BLL.DTOs
         public TimeOnly? ReminderTime { get; set; }
 
         public string? FriendEmail { get; set; }
+
+        public bool AddToGoogleCalendar { get; set; }
     }
 }

@@ -24,6 +24,14 @@
 
         public bool NotificationsEnabled { get; set; } = true;
 
+        public bool IsGoogleCalendarConnected { get; set; } = false;
+
+        public string? GoogleCalendarAccessToken { get; set; }
+
+        public string? GoogleCalendarRefreshToken { get; set; }
+
+        public DateTime? GoogleCalendarTokenExpiresAt { get; set; }
+
         public int AvatarId { get; set; } = 1;
 
         public bool IsOnboardingCompleted { get; set; } = false;

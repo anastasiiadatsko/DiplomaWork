@@ -165,11 +165,18 @@
                         ✨ Сузір’я балансу
                     </a>
 
+                    <a asp-controller="Coach"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Coach" ? "active" : "")">
+                        🤖 Агент
+                    </a>
+
                     <a asp-controller="Profile"
                        asp-action="Index"
                        class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Profile" ? "active" : "")">
                         👤 @Context.Session.GetString("UserName")
                     </a>
+
 
                     <a asp-controller="Auth"
                        asp-action="Logout"

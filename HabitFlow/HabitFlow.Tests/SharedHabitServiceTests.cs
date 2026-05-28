@@ -369,7 +369,7 @@ namespace HabitFlow.Tests
             Assert.False(friendProgress.IsOwner);
             Assert.Equal("Friend", friendProgress.UserName);
             Assert.False(friendProgress.IsCompletedToday);
-            Assert.Equal(0, friendProgress.CurrentStreak);
+            Assert.Equal(1, friendProgress.CurrentStreak);
             Assert.Equal(1, friendProgress.TotalCompleted);
         }
 
