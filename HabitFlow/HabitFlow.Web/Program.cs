@@ -38,7 +38,7 @@ builder.Services.AddScoped<HabitFlow.BLL.Interfaces.ICoachService,
 builder.Services.AddScoped<ISharedHabitService, SharedHabitService>();
 
 builder.Services.AddScoped<ISharedHabitRepository, SharedHabitRepository>();
-
+builder.Services.AddScoped<ITriggerLogRepository, TriggerLogRepository>();
 builder.Configuration.AddUserSecrets<Program>();
 
 builder.Services.AddHttpClient<IGoogleCalendarService, GoogleCalendarService>();

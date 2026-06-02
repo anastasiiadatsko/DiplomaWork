@@ -35,7 +35,15 @@ namespace HabitFlow.BLL.Services
 
         public async Task<DashboardViewModel> GetDashboardAsync(Guid userId, string userName)
         {
-            var habits = await this.habitRepository.GetByUserIdAsync(userId);
+            var ownHabits = await this.habitRepository.GetByUserIdAsync(userId);
+            var sharedHabits = await this.sharedHabitRepository.GetSharedHabitsByUserIdAsync(userId);
+
+            var habits = ownHabits
+                .Concat(sharedHabits)
+                .GroupBy(h => h.Id)
+                .Select(g => g.First())
+                .ToList();
+
             var today = DateTime.Today;
 
             var habitDtos = new List<HabitDto>();
@@ -45,21 +53,28 @@ namespace HabitFlow.BLL.Services
             {
                 var logs = await this.habitLogRepository.GetByHabitIdAsync(habit.Id);
                 var dto = await this.MapToDtoAsync(habit, logs, today, userId);
+
                 habitDtos.Add(dto);
 
                 if (this.IsScheduledToday(habit, today))
+                {
                     todayHabits.Add(dto);
+                }
             }
 
             var totalCompleted = await this.habitLogRepository
                 .GetCompletedCountByUserIdAsync(userId);
 
             var allLogs = new List<(DateTime Date, bool Completed)>();
+
             foreach (var habit in habits)
             {
                 var logs = await this.habitLogRepository.GetByHabitIdAsync(habit.Id);
-                foreach (var log in logs)
+
+                foreach (var log in logs.Where(l => l.UserId == userId))
+                {
                     allLogs.Add((log.ScheduledDate.Date, log.Status == LogStatus.Completed));
+                }
             }
 
             return new DashboardViewModel
@@ -76,7 +91,6 @@ namespace HabitFlow.BLL.Services
                 HeatmapData = this.BuildHeatmap(allLogs),
             };
         }
-
         public async Task<List<HabitDto>> GetAllHabitsAsync(Guid userId)
         {
             var ownHabits = await this.habitRepository.GetByUserIdAsync(userId);
