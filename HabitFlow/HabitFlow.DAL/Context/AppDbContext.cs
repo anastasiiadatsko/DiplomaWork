@@ -22,6 +22,8 @@ namespace HabitFlow.DAL.Context
 
         public DbSet<HabitInvitation> HabitInvitations => Set<HabitInvitation>();
 
+        public DbSet<TriggerLog> TriggerLogs => Set<TriggerLog>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<User>(e =>
@@ -97,6 +99,30 @@ namespace HabitFlow.DAL.Context
                  .WithMany(u => u.ReceivedHabitInvitations)
                  .HasForeignKey(i => i.InviteeUserId)
                  .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<TriggerLog>(e =>
+            {
+                e.HasKey(t => t.Id);
+
+                e.Property(t => t.Intensity)
+                 .IsRequired();
+
+                e.Property(t => t.TriggerType)
+                 .IsRequired();
+
+                e.Property(t => t.Note)
+                 .HasMaxLength(1000);
+
+                e.Property(t => t.Location)
+                 .HasMaxLength(200);
+
+                e.HasOne(t => t.User)
+                 .WithMany()
+                 .HasForeignKey(t => t.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
+
+                e.HasIndex(t => new { t.UserId, t.OccurredAt });
             });
         }
     }
