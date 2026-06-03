@@ -105,24 +105,35 @@ namespace HabitFlow.DAL.Context
             {
                 e.HasKey(t => t.Id);
 
-                e.Property(t => t.Intensity)
+                e.Property(t => t.CravingLevel)
                  .IsRequired();
 
                 e.Property(t => t.TriggerType)
                  .IsRequired();
 
-                e.Property(t => t.Note)
-                 .HasMaxLength(1000);
+                e.Property(t => t.TimeOfDay)
+                 .HasMaxLength(50);
 
                 e.Property(t => t.Location)
                  .HasMaxLength(200);
+
+                e.Property(t => t.EmotionalState)
+                 .HasMaxLength(200);
+
+                e.Property(t => t.Note)
+                 .HasMaxLength(1000);
+
+                e.HasOne(t => t.Habit)
+                 .WithMany()
+                 .HasForeignKey(t => t.HabitId)
+                 .OnDelete(DeleteBehavior.Cascade);
 
                 e.HasOne(t => t.User)
                  .WithMany()
                  .HasForeignKey(t => t.UserId)
                  .OnDelete(DeleteBehavior.Cascade);
 
-                e.HasIndex(t => new { t.UserId, t.OccurredAt });
+                e.HasIndex(t => new { t.HabitId, t.UserId, t.OccurredAt });
             });
         }
     }
