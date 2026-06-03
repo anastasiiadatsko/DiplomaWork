@@ -12,6 +12,18 @@ namespace HabitFlow.BLL.DTOs
 
         public string Category { get; set; } = string.Empty;
 
+        public HabitMode Mode { get; set; }
+
+        public QuitCategory? QuitCategory { get; set; }
+
+        public int CleanDays { get; set; }
+
+        public int RelapsesCount { get; set; }
+
+        public int DefeatedCravings { get; set; }
+
+        public double AverageCravingLevel { get; set; }
+
         public FrequencyType FrequencyType { get; set; }
 
         public List<DayOfWeek> TargetDays { get; set; } = new();

@@ -18,5 +18,7 @@ namespace HabitFlow.Domain.Interfaces
             Guid userId,
             DateTime from,
             DateTime to);
+
+        Task<List<TriggerLog>> GetByHabitAndUserAsync(Guid habitId, Guid userId);
     }
 }

@@ -404,6 +404,30 @@
                     </div>
                 </div>
 
+                <!-- HABIT MODE -->
+                <div class="form-group">
+                    <label class="form-label">Тип звички</label>
+                    <select asp-for="Mode" class="form-input" id="habitMode">
+                        <option value="Form">Формую нову звичку</option>
+                        <option value="Quit">Відмовляюся від звички</option>
+                    </select>
+                    <span asp-validation-for="Mode" class="error-msg"></span>
+                </div>
+
+                <!-- QUIT CATEGORY -->
+                <div class="form-group" id="quitCategoryBlock" style="display:none;">
+                    <label class="form-label">Категорія звички відмови</label>
+                    <select asp-for="QuitCategory" class="form-input">
+                        <option value="">Оберіть категорію</option>
+                        <option value="Smoking">Куріння</option>
+                        <option value="Alcohol">Алкоголь</option>
+                        <option value="Sugar">Солодке</option>
+                        <option value="SocialMedia">Соціальні мережі</option>
+                        <option value="Other">Інше</option>
+                    </select>
+                    <span asp-validation-for="QuitCategory" class="error-msg"></span>
+                </div>
+
                 <hr class="divider" />
 
                 <!-- FREQUENCY -->
@@ -552,6 +576,23 @@
             document.getElementById('previewName').textContent = name;
             document.getElementById('previewMeta').textContent = freqText;
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const habitMode = document.getElementById('habitMode');
+            const quitCategoryBlock = document.getElementById('quitCategoryBlock');
+
+            function toggleQuitCategory() {
+                if (habitMode.value === 'Quit') {
+                    quitCategoryBlock.style.display = 'block';
+                } else {
+                    quitCategoryBlock.style.display = 'none';
+                }
+            }
+
+            habitMode.addEventListener('change', toggleQuitCategory);
+            toggleQuitCategory();
+        });
+
     </script>
 
 </body>

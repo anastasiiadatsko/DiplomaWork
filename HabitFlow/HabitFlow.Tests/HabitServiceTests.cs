@@ -161,6 +161,7 @@ namespace HabitFlow.Tests
             return new HabitService(
                 new FakeHabitRepository(habit),
                 logRepository,
+                new FakeTriggerLogRepository(),
                 new FakeSharedHabitRepository(),
                 NullLogger<HabitService>.Instance,
                 new FakeGoogleCalendarService());
@@ -280,6 +281,66 @@ namespace HabitFlow.Tests
             {
                 this.UpdateCalls++;
                 return Task.CompletedTask;
+            }
+        }
+
+        private sealed class FakeTriggerLogRepository : ITriggerLogRepository
+        {
+            public List<TriggerLog> Logs { get; } = new();
+
+            public Task AddAsync(TriggerLog triggerLog)
+            {
+                this.Logs.Add(triggerLog);
+                return Task.CompletedTask;
+            }
+
+            public Task UpdateAsync(TriggerLog triggerLog)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task DeleteAsync(Guid id)
+            {
+                var log = this.Logs.FirstOrDefault(l => l.Id == id);
+
+                if (log != null)
+                {
+                    this.Logs.Remove(log);
+                }
+
+                return Task.CompletedTask;
+            }
+
+            public Task<TriggerLog?> GetByIdAsync(Guid id)
+            {
+                return Task.FromResult(this.Logs.FirstOrDefault(l => l.Id == id));
+            }
+
+            public Task<List<TriggerLog>> GetByUserIdAsync(Guid userId)
+            {
+                return Task.FromResult(this.Logs
+                    .Where(l => l.UserId == userId)
+                    .ToList());
+            }
+
+            public Task<List<TriggerLog>> GetByUserIdForPeriodAsync(
+                Guid userId,
+                DateTime from,
+                DateTime to)
+            {
+                return Task.FromResult(this.Logs
+                    .Where(l =>
+                        l.UserId == userId &&
+                        l.OccurredAt >= from &&
+                        l.OccurredAt <= to)
+                    .ToList());
+            }
+
+            public Task<List<TriggerLog>> GetByHabitAndUserAsync(Guid habitId, Guid userId)
+            {
+                return Task.FromResult(this.Logs
+                    .Where(l => l.HabitId == habitId && l.UserId == userId)
+                    .ToList());
             }
         }
 

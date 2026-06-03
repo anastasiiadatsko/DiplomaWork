@@ -15,16 +15,19 @@ namespace HabitFlow.BLL.Services
         private readonly ILogger<HabitService> logger;
         private readonly ISharedHabitRepository sharedHabitRepository;
         private readonly IGoogleCalendarService googleCalendarService;
+        private readonly ITriggerLogRepository triggerLogRepository;
 
         public HabitService(
     IHabitRepository habitRepository,
     IHabitLogRepository habitLogRepository,
+    ITriggerLogRepository triggerLogRepository,
     ISharedHabitRepository sharedHabitRepository,
     ILogger<HabitService> logger,
     IGoogleCalendarService googleCalendarService)
         {
             this.habitRepository = habitRepository;
             this.habitLogRepository = habitLogRepository;
+            this.triggerLogRepository = triggerLogRepository;
             this.sharedHabitRepository = sharedHabitRepository;
             this.logger = logger;
             this.googleCalendarService = googleCalendarService;
@@ -145,6 +148,8 @@ namespace HabitFlow.BLL.Services
                 Name = dto.Name,
                 Description = dto.Description,
                 Category = dto.Category,
+                Mode = dto.Mode,
+                QuitCategory = dto.QuitCategory,
                 FrequencyType = dto.FrequencyType,
                 TargetDaysJson = JsonSerializer.Serialize(dto.TargetDays),
                 Color = dto.Color,
@@ -437,12 +442,38 @@ namespace HabitFlow.BLL.Services
             var isShared = participantsCount > 1;
             var isOwner = habit.UserId == currentUserId || participant?.IsOwner == true;
 
+            var cleanDays = 0;
+            var relapsesCount = 0;
+            var defeatedCravings = 0;
+            var averageCravingLevel = 0.0;
+
+            if (habit.Mode == HabitMode.Quit)
+            {
+                var userHabitLogs = logs
+                    .Where(l => l.UserId == currentUserId)
+                    .ToList();
+
+                var triggerLogs = await this.triggerLogRepository
+                    .GetByHabitAndUserAsync(habit.Id, currentUserId);
+
+                cleanDays = this.CalculateCleanDays(userHabitLogs);
+                relapsesCount = triggerLogs.Count(t => t.DidRelapse);
+                defeatedCravings = triggerLogs.Count(t => t.Resisted && !t.DidRelapse);
+
+                averageCravingLevel = triggerLogs.Count == 0
+                    ? 0
+                    : Math.Round(triggerLogs.Average(t => t.CravingLevel), 1);
+            }
+
+
             return new HabitDto
             {
                 Id = habit.Id,
                 Name = habit.Name,
                 Description = habit.Description,
                 Category = habit.Category,
+                Mode = habit.Mode,
+                QuitCategory = habit.QuitCategory,
                 FrequencyType = habit.FrequencyType,
                 TargetDays = targetDays,
                 Color = habit.Color,
@@ -456,7 +487,35 @@ namespace HabitFlow.BLL.Services
                 IsShared = isShared,
                 IsOwner = isOwner,
                 ParticipantsCount = participantsCount,
+                CleanDays = cleanDays,
+                RelapsesCount = relapsesCount,
+                DefeatedCravings = defeatedCravings,
+                AverageCravingLevel = averageCravingLevel,
             };
+        }
+
+        private int CalculateCleanDays(List<HabitLog> habitLogs)
+        {
+            var orderedLogs = habitLogs
+                .OrderByDescending(l => l.ScheduledDate.Date)
+                .ToList();
+
+            var cleanDays = 0;
+
+            foreach (var log in orderedLogs)
+            {
+                if (log.Status == LogStatus.Failed)
+                {
+                    break;
+                }
+
+                if (log.Status == LogStatus.Completed)
+                {
+                    cleanDays++;
+                }
+            }
+
+            return cleanDays;
         }
 
         private int CalculateStreak(List<HabitLog> completedLogs)

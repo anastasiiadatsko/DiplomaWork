@@ -14,6 +14,10 @@ namespace HabitFlow.BLL.DTOs
         [Required(ErrorMessage = "Оберіть категорію")]
         public string Category { get; set; } = string.Empty;
 
+        public HabitMode Mode { get; set; } = HabitMode.Form;
+
+        public QuitCategory? QuitCategory { get; set; }
+
         public FrequencyType FrequencyType { get; set; } = FrequencyType.Daily;
 
         public List<DayOfWeek> TargetDays { get; set; } = new();

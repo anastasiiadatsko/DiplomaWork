@@ -14,6 +14,10 @@ namespace HabitFlow.Domain.Entities
 
         public string Category { get; set; } = string.Empty;
 
+        public HabitMode Mode { get; set; } = HabitMode.Form;
+
+        public QuitCategory? QuitCategory { get; set; }
+
         public FrequencyType FrequencyType { get; set; }
 
         public string TargetDaysJson { get; set; } = "[]";

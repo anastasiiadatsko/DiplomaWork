@@ -314,6 +314,33 @@
             color: #dc2626;
         }
 
+        .btn-clean {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+            .btn-clean:hover {
+                background: #bbf7d0;
+            }
+
+        .btn-craving {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+            .btn-craving:hover {
+                background: #fde68a;
+            }
+
+        .btn-relapse {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+            .btn-relapse:hover {
+                background: #fecaca;
+            }
+
             .btn-delete:hover {
                 background: #fee2e2;
             }
@@ -433,6 +460,11 @@
                                     </span>
                                 }
 
+                                @if (habit.Mode == HabitMode.Quit)
+                                {
+                                    <span class="tag tag-paused">🚭 Відмова</span>
+                                }
+
                                 @if (!habit.IsActive)
                                 {
                                     <span class="tag tag-paused">⏸ Пауза</span>
@@ -441,19 +473,88 @@
                         </div>
 
                         <div class="habit-stats">
-                            <div class="habit-stat">
-                                <span class="habit-stat-val">
-                                    @(habit.CurrentStreak > 0 ? $"🔥{habit.CurrentStreak}" : "—")
-                                </span>
-                                <span class="habit-stat-label">Серія</span>
-                            </div>
-                            <div class="habit-stat">
-                                <span class="habit-stat-val">@habit.ConsistencyRate%</span>
-                                <span class="habit-stat-label">Регулярність</span>
-                            </div>
+                            @if (habit.Mode == HabitMode.Quit)
+                            {
+                                <div class="habit-stat">
+                                    <span class="habit-stat-val">
+                                        @(habit.CleanDays > 0 ? $"🟢{habit.CleanDays}" : "—")
+                                    </span>
+                                    <span class="habit-stat-label">Чисті дні</span>
+                                </div>
+
+                                <div class="habit-stat">
+                                    <span class="habit-stat-val">💪@habit.DefeatedCravings</span>
+                                    <span class="habit-stat-label">Потяги</span>
+                                </div>
+
+                                <div class="habit-stat">
+                                    <span class="habit-stat-val">❌@habit.RelapsesCount</span>
+                                    <span class="habit-stat-label">Зриви</span>
+                                </div>
+
+                                <div class="habit-stat">
+                                    <span class="habit-stat-val">@habit.AverageCravingLevel</span>
+                                    <span class="habit-stat-label">Сер. потяг</span>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="habit-stat">
+                                    <span class="habit-stat-val">
+                                        @(habit.CurrentStreak > 0 ? $"🔥{habit.CurrentStreak}" : "—")
+                                    </span>
+                                    <span class="habit-stat-label">Серія</span>
+                                </div>
+
+                                <div class="habit-stat">
+                                    <span class="habit-stat-val">@habit.ConsistencyRate%</span>
+                                    <span class="habit-stat-label">Регулярність</span>
+                                </div>
+                            }
                         </div>
 
                         <div class="habit-actions">
+
+                            @if (habit.Mode == HabitMode.Quit && habit.IsActive)
+                            {
+                                <form asp-controller="QuitHabit"
+                                      asp-action="LogCleanDay"
+                                      method="post"
+                                      style="display:inline">
+                                    <input type="hidden" name="habitId" value="@habit.Id" />
+                                    <button type="submit" class="action-btn btn-clean"
+                                            title="Зафіксувати чистий день">
+                                        ✅ Чистий
+                                    </button>
+                                </form>
+
+                                <form asp-controller="QuitHabit"
+                                      asp-action="LogCraving"
+                                      method="post"
+                                      style="display:inline">
+                                    <input type="hidden" name="habitId" value="@habit.Id" />
+                                    <input type="hidden" name="CravingLevel" value="5" />
+                                    <input type="hidden" name="TriggerType" value="Other" />
+                                    <button type="submit" class="action-btn btn-craving"
+                                            title="Зафіксувати потяг без зриву">
+                                        ⚠️ Потяг
+                                    </button>
+                                </form>
+
+                                <form asp-controller="QuitHabit"
+                                      asp-action="LogRelapse"
+                                      method="post"
+                                      style="display:inline">
+                                    <input type="hidden" name="habitId" value="@habit.Id" />
+                                    <input type="hidden" name="CravingLevel" value="8" />
+                                    <input type="hidden" name="TriggerType" value="Other" />
+                                    <button type="submit" class="action-btn btn-relapse"
+                                            title="Зафіксувати зрив">
+                                        ❌ Зрив
+                                    </button>
+                                </form>
+                            }
+
                             @if (habit.IsOwner)
                             {
                                 <a asp-controller="Habit" asp-action="Edit"

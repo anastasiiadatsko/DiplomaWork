@@ -67,5 +67,13 @@ namespace HabitFlow.DAL.Repositories
                 .OrderByDescending(t => t.OccurredAt)
                 .ToListAsync();
         }
+
+        public async Task<List<TriggerLog>> GetByHabitAndUserAsync(Guid habitId, Guid userId)
+        {
+            return await this.context.TriggerLogs
+                .Where(t => t.HabitId == habitId && t.UserId == userId)
+                .OrderByDescending(t => t.OccurredAt)
+                .ToListAsync();
+        }
     }
 }
