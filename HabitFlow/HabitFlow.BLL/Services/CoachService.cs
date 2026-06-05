@@ -253,6 +253,10 @@ namespace HabitFlow.BLL.Services
 
             return this.ParseSummaryResponse(text);
         }
+        public async Task<AnalyticsViewModel> GetHabitAnalyticsForVoiceAsync(Guid habitId, Guid userId)
+        {
+            return await this.analyticsService.GetHabitAnalyticsAsync(habitId, userId);
+        }
 
         // ═══════════════════════════════════════════════════════════
         //  Prompts

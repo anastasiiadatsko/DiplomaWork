@@ -175,6 +175,11 @@ namespace HabitFlow.Web.Controllers
                 return;
             }
 
+            // Завантажуємо аналітику звички для персоналізованого системного промпту
+            var analyticsVm = await this.coachService.GetHabitAnalyticsForVoiceAsync(habitId, userId.Value);
+            var voiceSystemPrompt = this.BuildHabitVoiceSystemPrompt(analyticsVm);
+            _logger.LogInformation("VoiceStream: системний промпт сформовано для звички '{H}'", analyticsVm?.HabitName);
+
             var setup = JsonSerializer.Serialize(new
             {
                 setup = new
@@ -195,13 +200,7 @@ namespace HabitFlow.Web.Controllers
                     input_audio_transcription = new { },
                     system_instruction = new
                     {
-                        parts = new[] { new {
-                            text =
-                                "Ти — персональний агент з формування звичок у застосунку HabitFlow. " +
-                                "Завжди говори тільки українською мовою. " +
-                                "Будь теплим, конкретним і підтримуючим. " +
-                                "Допомагай аналізувати прогрес, долати перешкоди і будувати стійкі звички."
-                        }}
+                        parts = new[] { new { text = voiceSystemPrompt } }
                     }
                 }
             });
@@ -286,6 +285,72 @@ namespace HabitFlow.Web.Controllers
                 }
             }
         }
+
+        // ═══════════════════════════════════════════════════════════
+        //  Системний промпт для голосового агента формування звичок
+        // ═══════════════════════════════════════════════════════════
+
+        private string BuildHabitVoiceSystemPrompt(AnalyticsViewModel? a)
+        {
+            var sb = new StringBuilder();
+
+            sb.AppendLine(
+                "Ти — HabitCoach, голосовий AI-агент з формування звичок у застосунку HabitFlow. " +
+                "Завжди говори тільки українською мовою, на 'ти'. " +
+                "Тон: прямий, підтримуючий, живий — як тренер що знає тебе особисто. " +
+                "Без зайвих слів, іноді з легким гумором. Без пафосу і загальних фраз. " +
+                "ЗАБОРОНЕНО казати: 'Я тут щоб допомогти', 'Зрозуміло що', 'демонструє стабільність', " +
+                "'варто подумати', 'інколи буває', загальні поради без конкретних цифр. " +
+                "Якщо питають 'ти робот?' — відповідай чесно і коротко: 'Так, але розумний.' " +
+                "Якщо людина хоче кинути звичку або втратила мотивацію — НЕ кажи 'кинь' або 'не роби'. " +
+                "Визнай що важко, і нагадай про реальний прогрес з цифрами нижче. " +
+                "Якщо є небезпека для здоров'я — м'яко направ до лікаря або близьких. " +
+                "Відповідай коротко і по суті — це голосовий формат, без довгих монологів.");
+
+            sb.AppendLine();
+
+            if (a != null)
+            {
+                sb.AppendLine("[Дані звички користувача:]");
+                sb.AppendLine($"Назва звички: {a.HabitName}");
+                sb.AppendLine($"Днів з початку: {a.DaysSinceStart}");
+                sb.AppendLine($"Поточна серія: {a.CurrentStreak} днів");
+                sb.AppendLine($"Рекордна серія: {a.MaxStreak} днів");
+                sb.AppendLine($"Виконань всього: {a.TotalCompleted} ({a.ConsistencyRate}% дотримання)");
+                sb.AppendLine($"Ризик пропуску завтра: {a.BreakRisk}%");
+                sb.AppendLine($"Найслабший день тижня: {a.MostRiskyDay}");
+                sb.AppendLine($"Найсильніший день тижня: {a.OptimalDayToAct}");
+                sb.AppendLine($"Шанс виконати після виконання: {a.MarkovP00}%");
+                sb.AppendLine($"Шанс повернутись після пропуску: {a.MarkovP10}%");
+
+                if (a.WeekdayStats?.Any() == true)
+                {
+                    var stats = string.Join(", ", a.WeekdayStats.Select(w => $"{w.Day}:{w.Rate}%"));
+                    sb.AppendLine($"Статистика по днях тижня: {stats}");
+                }
+
+                sb.AppendLine();
+                sb.AppendLine(
+                    "Використовуй ці цифри як основу для конкретних порад — не загальних фраз. " +
+                    "Наприклад: якщо BreakRisk > 50% — запропонуй нагадування на конкретний час. " +
+                    "Якщо серія активна — підтримай збереження і назви кількість днів. " +
+                    "Якщо є слабкий день — запропонуй мінімальний варіант саме для нього. " +
+                    "Якщо ConsistencyRate < 50% — не кажи 'погано', знайди позитивний факт і один крок покращення. " +
+                    "Починай розмову з короткого привітання і одного конкретного спостереження про прогрес.");
+            }
+            else
+            {
+                sb.AppendLine(
+                    "Дані звички недоступні. Почни з короткого привітання і запитай як справи зі звичкою. " +
+                    "Допомагай аналізувати прогрес, долати перешкоди і будувати стійкі звички.");
+            }
+
+            return sb.ToString();
+        }
+
+        // ═══════════════════════════════════════════════════════════
+        //  WebSocket helpers
+        // ═══════════════════════════════════════════════════════════
 
         private async Task<byte[]?> ReceiveFullMessageAsync(
             WebSocket ws,

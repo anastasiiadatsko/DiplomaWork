@@ -30,16 +30,13 @@ builder.Services.AddScoped<IBalanceConstellationService, BalanceConstellationSer
 builder.Services.AddHttpClient<CoachService>();
 builder.Services.AddScoped<ICoachService, CoachService>();
 
-builder.Services.AddHttpClient<HabitFlow.BLL.Services.CoachService>();
-
-builder.Services.AddScoped<HabitFlow.BLL.Interfaces.ICoachService,
-                            HabitFlow.BLL.Services.CoachService>();
-
 builder.Services.AddScoped<ISharedHabitService, SharedHabitService>();
 
 builder.Services.AddScoped<ISharedHabitRepository, SharedHabitRepository>();
 builder.Services.AddScoped<ITriggerLogRepository, TriggerLogRepository>();
 builder.Services.AddScoped<IQuitHabitService, QuitHabitService>();
+builder.Services.AddScoped<IQuitAnalyticsService, QuitAnalyticsService>();
+builder.Services.AddHttpClient<IQuitCoachService, QuitCoachService>();
 builder.Configuration.AddUserSecrets<Program>();
 
 builder.Services.AddHttpClient<IGoogleCalendarService, GoogleCalendarService>();

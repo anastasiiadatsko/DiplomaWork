@@ -165,7 +165,7 @@ namespace HabitFlow.BLL.Services
                 throw new InvalidOperationException("Quit habit was not found.");
             }
         }
-
+        
         private int CalculateCleanDays(List<HabitLog> habitLogs)
         {
             var orderedLogs = habitLogs

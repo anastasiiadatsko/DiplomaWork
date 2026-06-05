@@ -1,4 +1,5 @@
 ﻿using HabitFlow.BLL.Interfaces;
+using HabitFlow.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HabitFlow.Web.Controllers
@@ -28,27 +29,20 @@ namespace HabitFlow.Web.Controllers
         public async Task<IActionResult> Index(Guid habitId)
         {
             if (this.CurrentUserId == null)
-            {
                 return this.RedirectToAction("Login", "Auth");
-            }
 
             if (habitId == Guid.Empty)
-            {
                 return this.RedirectToAction("Index", "Habit");
-            }
 
-            var habit = await this.habitService.GetByIdAsync(
-                habitId,
-                this.CurrentUserId.Value);
+            var habit = await this.habitService.GetByIdAsync(habitId, this.CurrentUserId.Value);
 
             if (habit == null)
-            {
                 return this.NotFound();
-            }
 
-            var model = await this.analyticsService.GetHabitAnalyticsAsync(
-                habitId,
-                this.CurrentUserId.Value);
+            if (habit.Mode == HabitMode.Quit)
+                return this.RedirectToAction("Index", "Quit");
+
+            var model = await this.analyticsService.GetHabitAnalyticsAsync(habitId, this.CurrentUserId.Value);
 
             this.ViewBag.HabitId = habitId;
 
