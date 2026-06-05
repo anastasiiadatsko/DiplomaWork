@@ -20,6 +20,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IHabitRepository, HabitRepository>();
 builder.Services.AddScoped<IHabitLogRepository, HabitLogRepository>();
+builder.Services.AddScoped<ITriggerLogRepository, TriggerLogRepository>();
+builder.Services.AddScoped<ISharedHabitRepository, SharedHabitRepository>();
+
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
@@ -27,19 +30,16 @@ builder.Services.AddScoped<IHabitService, HabitService>();
 builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
 builder.Services.AddScoped<IRecommendationService, RecommendationService>();
 builder.Services.AddScoped<IBalanceConstellationService, BalanceConstellationService>();
-builder.Services.AddHttpClient<CoachService>();
-builder.Services.AddScoped<ICoachService, CoachService>();
-
 builder.Services.AddScoped<ISharedHabitService, SharedHabitService>();
-
-builder.Services.AddScoped<ISharedHabitRepository, SharedHabitRepository>();
-builder.Services.AddScoped<ITriggerLogRepository, TriggerLogRepository>();
 builder.Services.AddScoped<IQuitHabitService, QuitHabitService>();
 builder.Services.AddScoped<IQuitAnalyticsService, QuitAnalyticsService>();
-builder.Services.AddHttpClient<IQuitCoachService, QuitCoachService>();
-builder.Configuration.AddUserSecrets<Program>();
 
+builder.Services.AddHttpClient<CoachService>();
+builder.Services.AddScoped<ICoachService, CoachService>();
+builder.Services.AddHttpClient<IQuitCoachService, QuitCoachService>();
 builder.Services.AddHttpClient<IGoogleCalendarService, GoogleCalendarService>();
+
+builder.Configuration.AddUserSecrets<Program>();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>

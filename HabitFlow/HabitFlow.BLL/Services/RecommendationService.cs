@@ -50,7 +50,6 @@ namespace HabitFlow.BLL.Services
                         .Where(t => t.OccurredAt >= today.AddDays(-3) && !t.DidRelapse)
                         .Count();
 
-                    // Нещодавній зрив
                     var recentRelapse = triggerLogs
                         .Where(t => t.DidRelapse)
                         .OrderByDescending(t => t.OccurredAt)
@@ -69,7 +68,6 @@ namespace HabitFlow.BLL.Services
                             HabitName = habit.Name,
                         });
                     }
-                    // Багато потягів за останні дні
                     else if (recentCravings >= 3)
                     {
                         recommendations.Add(new RecommendationViewModel
@@ -83,7 +81,6 @@ namespace HabitFlow.BLL.Services
                             HabitName = habit.Name,
                         });
                     }
-                    // Досягнення milestone
                     else if (cleanDays == 7 || cleanDays == 14 || cleanDays == 30 || cleanDays == 100)
                     {
                         recommendations.Add(new RecommendationViewModel
@@ -97,7 +94,6 @@ namespace HabitFlow.BLL.Services
                             HabitName = habit.Name,
                         });
                     }
-                    // Перші дні відмови
                     else if (cleanDays <= 3 && cleanDays > 0)
                     {
                         recommendations.Add(new RecommendationViewModel
@@ -112,7 +108,7 @@ namespace HabitFlow.BLL.Services
                         });
                     }
 
-                    continue; // Не застосовувати звичайні рекомендації до quit-звичок
+                    continue; 
                 }
 
                 // ===== REGULAR HABITS =====
