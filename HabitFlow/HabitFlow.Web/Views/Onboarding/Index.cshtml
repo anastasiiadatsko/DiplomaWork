@@ -1,0 +1,125 @@
+﻿@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <title>HabitFlow — Розкажи про себе</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: #f0fdf4; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+        .card { background: white; border-radius: 24px; padding: 48px; max-width: 600px; width: 100%; box-shadow: 0 4px 40px rgba(0,0,0,0.08); }
+        .step-badge { background: #dcfce7; color: #16a34a; font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 100px; display: inline-block; margin-bottom: 20px; }
+        h1 { font-size: 26px; font-weight: 700; color: #111827; margin-bottom: 8px; }
+        .subtitle { font-size: 15px; color: #6b7280; margin-bottom: 36px; line-height: 1.5; }
+        .section-title { font-size: 13px; font-weight: 600; color: #374151; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+        .goals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
+        .goal-btn { padding: 16px; border: 2px solid #e5e7eb; border-radius: 12px; background: white; cursor: pointer; text-align: left; transition: all 0.2s; font-family: 'Inter', sans-serif; }
+        .goal-btn:hover { border-color: #16a34a; background: #f0fdf4; }
+        .goal-btn.selected { border-color: #16a34a; background: #f0fdf4; }
+        .goal-btn .goal-icon { font-size: 24px; margin-bottom: 6px; display: block; }
+        .goal-btn .goal-name { font-size: 14px; font-weight: 600; color: #111827; margin-bottom: 2px; }
+        .goal-btn .goal-desc { font-size: 12px; color: #6b7280; }
+        textarea { width: 100%; padding: 12px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 14px; color: #111827; background: #f9fafb; resize: vertical; min-height: 90px; outline: none; transition: border-color 0.2s; margin-bottom: 24px; }
+        textarea:focus { border-color: #16a34a; background: white; }
+        .time-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 32px; }
+        .time-btn { padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; background: white; cursor: pointer; text-align: center; font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: #374151; transition: all 0.2s; }
+        .time-btn:hover { border-color: #16a34a; }
+        .time-btn.selected { border-color: #16a34a; background: #f0fdf4; color: #16a34a; }
+        .btn-submit { width: 100%; padding: 14px; background: #16a34a; color: white; border: none; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        .btn-submit:hover { background: #15803d; }
+        .btn-submit:disabled { background: #d1fae5; cursor: not-allowed; }
+        input[type="hidden"] { display: none; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="step-badge">👋 Привіт! Давай познайомимось</div>
+        <h1>Що ти хочеш покращити?</h1>
+        <div class="subtitle">Це допоможе системі підібрати найкращі звички саме для тебе.</div>
+
+        <form asp-controller="Onboarding" asp-action="Index" method="post" id="onboardingForm">
+            <input type="hidden" name="Goal" id="goalInput" />
+            <input type="hidden" name="AvailableTime" id="timeInput" />
+
+            <!-- Цілі -->
+            <div class="section-title">Твоя головна ціль</div>
+            <div class="goals-grid">
+                <button type="button" class="goal-btn" onclick="selectGoal(this, 'Здоров\'я та спорт')">
+                    <span class="goal-icon">🏃</span>
+                    <div class="goal-name">Здоров'я та спорт</div>
+                    <div class="goal-desc">Більше рухатись, харчуватись краще</div>
+                </button>
+                <button type="button" class="goal-btn" onclick="selectGoal(this, 'Продуктивність')">
+                    <span class="goal-icon">🎯</span>
+                    <div class="goal-name">Продуктивність</div>
+                    <div class="goal-desc">Більше встигати, менше відволікатись</div>
+                </button>
+                <button type="button" class="goal-btn" onclick="selectGoal(this, 'Саморозвиток')">
+                    <span class="goal-icon">📚</span>
+                    <div class="goal-name">Саморозвиток</div>
+                    <div class="goal-desc">Вчитись, читати, розвиватись</div>
+                </button>
+                <button type="button" class="goal-btn" onclick="selectGoal(this, 'Ментальне здоров\'я')">
+                    <span class="goal-icon">🧘</span>
+                    <div class="goal-name">Ментальне здоров'я</div>
+                    <div class="goal-desc">Спокій, баланс, медитація</div>
+                </button>
+                <button type="button" class="goal-btn" onclick="selectGoal(this, 'Фінанси')">
+                    <span class="goal-icon">💰</span>
+                    <div class="goal-name">Фінанси</div>
+                    <div class="goal-desc">Зберігати, планувати бюджет</div>
+                </button>
+                <button type="button" class="goal-btn" onclick="selectGoal(this, 'Стосунки')">
+                    <span class="goal-icon">❤️</span>
+                    <div class="goal-name">Стосунки</div>
+                    <div class="goal-desc">Більше часу для близьких</div>
+                </button>
+            </div>
+
+            <!-- Опис дня -->
+            <div class="section-title">Опиши свій типовий день</div>
+            <textarea name="Description" placeholder="Наприклад: прокидаюсь о 8, йду на роботу, ввечері хочу займатись спортом але зазвичай дивлюсь серіали..."></textarea>
+
+            <!-- Час -->
+            <div class="section-title">Скільки часу готовий виділяти на звички?</div>
+            <div class="time-grid">
+                <button type="button" class="time-btn" onclick="selectTime(this, '15 хвилин')">⚡ 15 хв</button>
+                <button type="button" class="time-btn" onclick="selectTime(this, '30 хвилин')">🔥 30 хв</button>
+                <button type="button" class="time-btn" onclick="selectTime(this, '1 година')">💪 1 година</button>
+            </div>
+
+            <button type="submit" class="btn-submit" id="submitBtn" disabled>
+                Розпочати →
+            </button>
+        </form>
+    </div>
+
+    <script>
+        let goalSelected = false;
+        let timeSelected = false;
+
+        function selectGoal(btn, value) {
+            document.querySelectorAll('.goal-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('goalInput').value = value;
+            goalSelected = true;
+            checkCanSubmit();
+        }
+
+        function selectTime(btn, value) {
+            document.querySelectorAll('.time-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            document.getElementById('timeInput').value = value;
+            timeSelected = true;
+            checkCanSubmit();
+        }
+
+        function checkCanSubmit() {
+            document.getElementById('submitBtn').disabled = !(goalSelected && timeSelected);
+        }
+    </script>
+</body>
+</html>

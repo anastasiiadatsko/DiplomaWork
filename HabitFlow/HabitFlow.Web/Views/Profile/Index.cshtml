@@ -1,0 +1,1215 @@
+﻿@using System.Text
+@model HabitFlow.BLL.DTOs.ProfileViewModel
+
+@{
+    ViewData["Title"] = "Профіль";
+    var timeZone = string.IsNullOrWhiteSpace(Model.User.TimeZone) ? "UTC" : Model.User.TimeZone;
+
+    var wheelPointsBuilder = new StringBuilder();
+
+    if (Model.BalanceWheel != null)
+    {
+        var balanceValues = new[]
+        {
+            Model.BalanceWheel.Health,
+            Model.BalanceWheel.Career,
+            Model.BalanceWheel.Finance,
+            Model.BalanceWheel.Relationships,
+            Model.BalanceWheel.SelfDevelopment,
+            Model.BalanceWheel.Rest,
+            Model.BalanceWheel.EmotionalState,
+            Model.BalanceWheel.Environment
+        };
+
+        for (int i = 0; i < balanceValues.Length; i++)
+        {
+            var value = Math.Max(0, Math.Min(10, balanceValues[i]));
+            var angle = (-90 + i * 45) * Math.PI / 180;
+            var radius = value / 10.0 * 120;
+            var x = 170 + radius * Math.Cos(angle);
+            var y = 170 + radius * Math.Sin(angle);
+
+            wheelPointsBuilder.Append(x.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+            wheelPointsBuilder.Append(",");
+            wheelPointsBuilder.Append(y.ToString("F1", System.Globalization.CultureInfo.InvariantCulture));
+            wheelPointsBuilder.Append(" ");
+        }
+    }
+
+    var wheelPolygonPoints = wheelPointsBuilder.ToString().Trim();
+}
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: #f0fdf4;
+        color: #111827;
+    }
+
+    .page {
+        max-width: 1080px;
+        margin: 32px auto;
+        padding: 0 20px;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 24px;
+    }
+
+    .card {
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 18px;
+        padding: 24px;
+    }
+
+    .sidebar {
+        height: fit-content;
+        position: sticky;
+        top: 24px;
+        text-align: center;
+    }
+
+    .avatar-stage {
+        width: 190px;
+        height: 190px;
+        margin: 0 auto 16px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 50% 25%, #ffffff 0 18%, transparent 19%), linear-gradient(180deg, #dcfce7, #bbf7d0);
+        border: 1px solid #bbf7d0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        cursor: pointer;
+        overflow: hidden;
+        transition: transform 0.2s ease;
+    }
+
+        .avatar-stage:hover {
+            transform: translateY(-3px) scale(1.02);
+        }
+
+        .avatar-stage.avatar-bounce .buddy {
+            animation: buddyBounce 0.55s ease;
+        }
+
+    .buddy {
+        width: 128px;
+        height: 150px;
+        position: relative;
+        transform-origin: center bottom;
+        animation: buddyFloat 3s ease-in-out infinite;
+    }
+
+    .buddy-head {
+        width: 76px;
+        height: 76px;
+        background: #fde68a;
+        border: 3px solid #92400e;
+        border-radius: 50%;
+        position: absolute;
+        top: 4px;
+        left: 26px;
+        z-index: 3;
+    }
+
+    .buddy-hair {
+        width: 58px;
+        height: 28px;
+        background: #78350f;
+        border-radius: 34px 34px 14px 14px;
+        position: absolute;
+        top: -5px;
+        left: 8px;
+    }
+
+    .buddy-ear {
+        width: 14px;
+        height: 20px;
+        background: #fde68a;
+        border: 3px solid #92400e;
+        border-radius: 50%;
+        position: absolute;
+        top: 27px;
+        z-index: 1;
+    }
+
+        .buddy-ear.left {
+            left: 17px;
+        }
+
+        .buddy-ear.right {
+            right: 17px;
+        }
+
+    .buddy-eye {
+        width: 8px;
+        height: 8px;
+        background: #111827;
+        border-radius: 50%;
+        position: absolute;
+        top: 35px;
+        animation: blink 4s infinite;
+    }
+
+        .buddy-eye.left {
+            left: 23px;
+        }
+
+        .buddy-eye.right {
+            right: 23px;
+        }
+
+    .buddy-smile {
+        width: 26px;
+        height: 13px;
+        border-bottom: 3px solid #92400e;
+        border-radius: 0 0 30px 30px;
+        position: absolute;
+        left: 22px;
+        top: 48px;
+    }
+
+    .buddy-body {
+        width: 72px;
+        height: 70px;
+        background: #22c55e;
+        border: 3px solid #166534;
+        border-radius: 28px 28px 20px 20px;
+        position: absolute;
+        left: 28px;
+        top: 74px;
+        z-index: 2;
+    }
+
+    .buddy-shirt-dot {
+        width: 8px;
+        height: 8px;
+        background: #dcfce7;
+        border-radius: 50%;
+        position: absolute;
+        left: 31px;
+        top: 20px;
+        box-shadow: 0 18px 0 #dcfce7;
+    }
+
+    .buddy-arm {
+        width: 18px;
+        height: 58px;
+        background: #fde68a;
+        border: 3px solid #92400e;
+        border-radius: 999px;
+        position: absolute;
+        top: 82px;
+        z-index: 1;
+        transform-origin: top center;
+    }
+
+        .buddy-arm.left {
+            left: 10px;
+            transform: rotate(18deg);
+        }
+
+        .buddy-arm.right {
+            right: 10px;
+            transform: rotate(-22deg);
+            animation: wave 1.8s ease-in-out infinite;
+        }
+
+    .buddy-leg {
+        width: 18px;
+        height: 34px;
+        background: #14532d;
+        border-radius: 999px;
+        position: absolute;
+        top: 134px;
+        z-index: 1;
+    }
+
+        .buddy-leg.left {
+            left: 43px;
+            transform: rotate(5deg);
+        }
+
+        .buddy-leg.right {
+            right: 43px;
+            transform: rotate(-5deg);
+        }
+
+    .avatar-spark {
+        position: absolute;
+        font-size: 22px;
+        opacity: 0;
+        pointer-events: none;
+        z-index: 5;
+    }
+
+        .avatar-spark.one {
+            top: 24px;
+            right: 34px;
+        }
+
+        .avatar-spark.two {
+            bottom: 34px;
+            left: 34px;
+        }
+
+    .avatar-stage.avatar-bounce .avatar-spark.one {
+        animation: sparkPop 0.7s ease;
+    }
+
+    .avatar-stage.avatar-bounce .avatar-spark.two {
+        animation: sparkPop 0.7s ease 0.08s;
+    }
+
+    .avatar-speech {
+        background: #fff7ed;
+        border: 1px solid #fed7aa;
+        color: #9a3412;
+        border-radius: 14px;
+        padding: 12px 14px;
+        font-size: 14px;
+        line-height: 1.45;
+        text-align: left;
+        margin: 0 0 14px;
+        position: relative;
+    }
+
+        .avatar-speech::before {
+            content: "";
+            position: absolute;
+            top: -7px;
+            left: 50%;
+            width: 12px;
+            height: 12px;
+            background: #fff7ed;
+            border-left: 1px solid #fed7aa;
+            border-top: 1px solid #fed7aa;
+            transform: translateX(-50%) rotate(45deg);
+        }
+
+    .avatar-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .avatar-mini-btn {
+        border: 1px solid #bbf7d0;
+        background: #f0fdf4;
+        color: #166534;
+        padding: 9px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+        .avatar-mini-btn:hover {
+            background: #dcfce7;
+        }
+
+    .name {
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    .email {
+        color: #6b7280;
+        font-size: 14px;
+        word-break: break-word;
+        margin-bottom: 18px;
+    }
+
+    .profile-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #dcfce7;
+        color: #15803d;
+        padding: 8px 15px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        margin-bottom: 18px;
+    }
+
+    .quote-box {
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        color: #166534;
+        border-radius: 14px;
+        padding: 16px;
+        text-align: left;
+        margin-bottom: 14px;
+    }
+
+    .quote-label {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+    }
+
+    .quote-text {
+        font-size: 15px;
+        line-height: 1.5;
+        margin-bottom: 12px;
+    }
+
+    .quote-button {
+        border: none;
+        background: #22c55e;
+        color: white;
+        padding: 9px 13px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+        .quote-button:hover {
+            background: #15803d;
+        }
+
+    .content {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .title {
+        font-size: 20px;
+        font-weight: 700;
+        margin-bottom: 18px;
+    }
+
+    .info-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 13px 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+    .info-label {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .info-value {
+        font-weight: 600;
+        text-align: right;
+        word-break: break-word;
+    }
+
+    .form-grid {
+        display: grid;
+        gap: 16px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    label {
+        color: #4b5563;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    input {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1px solid #d1d5db;
+        border-radius: 12px;
+        font-size: 14px;
+        background: #f9fafb;
+    }
+
+        input:focus {
+            outline: none;
+            border-color: #22c55e;
+            background: white;
+        }
+
+    .button {
+        border: none;
+        background: #22c55e;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+
+        .button:hover {
+            background: #15803d;
+        }
+
+    .toast {
+        padding: 13px 16px;
+        border-radius: 12px;
+        font-size: 14px;
+    }
+
+    .toast-success {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+    }
+
+    .toast-error {
+        background: #fef2f2;
+        color: #b91c1c;
+        border: 1px solid #fecaca;
+    }
+
+    .balance-card {
+        padding: 32px;
+    }
+
+    .balance-title {
+        margin-bottom: 34px;
+    }
+
+    .balance-clean-layout {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 42px;
+        align-items: center;
+    }
+
+    .balance-clean-wheel {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .balance-clean-svg {
+        width: 260px;
+        height: 260px;
+        overflow: visible;
+    }
+
+    .balance-summary {
+        display: grid;
+    }
+
+    .balance-summary-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 24px;
+        align-items: center;
+        min-height: 54px;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 18px;
+    }
+
+        .balance-summary-row:last-child {
+            border-bottom: none;
+        }
+
+        .balance-summary-row span {
+            color: #9ca3af;
+        }
+
+        .balance-summary-row strong {
+            color: #111827;
+            font-weight: 700;
+            text-align: right;
+        }
+
+    .goal-box {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        background: #f0fdf4;
+        border: 1px solid #bbf7d0;
+        border-radius: 14px;
+        padding: 18px;
+        margin-bottom: 18px;
+    }
+
+    .goal-icon {
+        font-size: 34px;
+    }
+
+    .goal-name {
+        color: #166534;
+        font-weight: 700;
+        margin-bottom: 4px;
+    }
+
+    .goal-time {
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .empty {
+        text-align: center;
+        padding: 32px 16px;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 12px;
+    }
+
+    .empty-title {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .empty-text {
+        color: #6b7280;
+        margin-bottom: 18px;
+        line-height: 1.5;
+    }
+
+    .danger-card {
+        border-color: #fecaca;
+        background: #fffafa;
+    }
+
+    .danger-title {
+        color: #b91c1c;
+    }
+
+    .danger-text {
+        color: #6b7280;
+        font-size: 14px;
+        line-height: 1.5;
+        margin-bottom: 16px;
+    }
+
+    .button-danger {
+        background: #dc2626;
+    }
+
+        .button-danger:hover {
+            background: #b91c1c;
+        }
+
+    @@keyframes buddyFloat {
+        0%, 100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-5px);
+        }
+    }
+
+    @@keyframes buddyBounce {
+        0%, 100% {
+            transform: translateY(0) scale(1);
+        }
+
+        35% {
+            transform: translateY(-12px) scale(1.04);
+        }
+
+        65% {
+            transform: translateY(3px) scale(0.98);
+        }
+    }
+
+    @@keyframes wave {
+        0%, 100% {
+            transform: rotate(-22deg);
+        }
+
+        50% {
+            transform: rotate(-55deg);
+        }
+    }
+
+    @@keyframes blink {
+        0%, 92%, 100% {
+            transform: scaleY(1);
+        }
+
+        95% {
+            transform: scaleY(0.12);
+        }
+    }
+
+    @@keyframes sparkPop {
+        0% {
+            opacity: 0;
+            transform: scale(0.5) rotate(0);
+        }
+
+        45% {
+            opacity: 1;
+            transform: scale(1.25) rotate(12deg);
+        }
+
+        100% {
+            opacity: 0;
+            transform: scale(0.8) rotate(-8deg);
+        }
+    }
+
+    .balance-stars-panel {
+        margin-top: 26px;
+        padding-top: 22px;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .balance-stars-title {
+        font-size: 17px;
+        font-weight: 700;
+        color: #111827;
+        margin-bottom: 16px;
+    }
+
+    .balance-stars-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .balance-star-row {
+        display: grid;
+        grid-template-columns: 180px 1fr 50px;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 12px;
+        background: #f9fafb;
+        border-radius: 14px;
+    }
+
+    .balance-star-name {
+        font-size: 14px;
+        font-weight: 600;
+        color: #374151;
+        min-width: 145px;
+    }
+
+    .balance-stars {
+        font-size: 15px;
+        letter-spacing: 1px;
+        color: #f59e0b;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .balance-star-empty {
+        color: #d1d5db;
+    }
+
+    .balance-star-score {
+        font-size: 14px;
+        font-weight: 800;
+        color: #111827;
+        min-width: 42px;
+        text-align: right;
+    }
+
+    @@media (max-width: 860px) {
+        .page {
+            grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+            position: static;
+        }
+
+        .balance-clean-layout {
+            grid-template-columns: 1fr;
+            gap: 24px;
+        }
+
+        .balance-summary-row {
+            font-size: 15px;
+        }
+    }
+
+    @@media (max-width: 560px) {
+        .info-row {
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-value {
+            text-align: left;
+        }
+
+        .balance-clean-svg {
+            width: 240px;
+            height: 240px;
+        }
+
+        .balance-summary-row {
+            grid-template-columns: 1fr;
+            gap: 4px;
+        }
+
+            .balance-summary-row strong {
+                text-align: left;
+            }
+    }
+</style>
+
+<div class="page">
+    <aside class="card sidebar">
+        <div class="avatar-stage" id="avatarStage" onclick="cheerAvatar()">
+            <div class="buddy">
+                <div class="buddy-ear left"></div>
+                <div class="buddy-ear right"></div>
+
+                <div class="buddy-head">
+                    <div class="buddy-hair"></div>
+                    <div class="buddy-eye left"></div>
+                    <div class="buddy-eye right"></div>
+                    <div class="buddy-smile"></div>
+                </div>
+
+                <div class="buddy-arm left"></div>
+                <div class="buddy-arm right"></div>
+
+                <div class="buddy-body">
+                    <div class="buddy-shirt-dot"></div>
+                </div>
+
+                <div class="buddy-leg left"></div>
+                <div class="buddy-leg right"></div>
+            </div>
+
+            <span class="avatar-spark one">✨</span>
+            <span class="avatar-spark two">🌿</span>
+        </div>
+
+        <div class="avatar-speech" id="avatarSpeech">
+            Привіт. Я твій маленький помічник у HabitFlow.
+        </div>
+
+        <div class="avatar-actions">
+            <button type="button" class="avatar-mini-btn" onclick="setAvatarMood('calm')">Спокій</button>
+            <button type="button" class="avatar-mini-btn" onclick="setAvatarMood('power')">Заряд</button>
+        </div>
+
+        <div class="name">@Model.User.Name</div>
+        <div class="email">@Model.User.Email</div>
+
+        <div class="profile-badge">✨ Твій простір розвитку</div>
+
+        <div class="quote-box">
+            <div class="quote-label">Мотивація</div>
+            <div class="quote-text" id="quoteText">
+                Маленький крок сьогодні може стати великим результатом завтра.
+            </div>
+            <button type="button" class="quote-button" onclick="nextQuote()">Нова цитата</button>
+        </div>
+
+        @if (Model.CoachHabitId.HasValue)
+        {
+            <a href="/Coach/Session/@Model.CoachHabitId.Value" class="button" style="width:100%;">
+                🤖 Відкрити AI-агента
+            </a>
+        }
+        else
+        {
+            <a asp-controller="Habit" asp-action="Index" class="button" style="width:100%;">
+                ➕ Створити звичку для AI-агента
+            </a>
+        }
+    </aside>
+
+    <main class="content">
+        @if (TempData["Success"] != null)
+        {
+            <div class="toast toast-success">@TempData["Success"]</div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="toast toast-error">@TempData["Error"]</div>
+        }
+
+        <section class="card">
+            <div class="title">Мій акаунт</div>
+
+            <div class="info-row">
+                <span class="info-label">Електронна пошта</span>
+                <span class="info-value">@Model.User.Email</span>
+            </div>
+
+            <div class="info-row">
+                <span class="info-label">Дата реєстрації</span>
+                <span class="info-value">@Model.User.CreatedAt.ToString("dd.MM.yyyy")</span>
+            </div>
+        </section>
+
+        <section class="card">
+            <div class="title">Google Calendar</div>
+
+            @if (Model.User.IsGoogleCalendarConnected)
+            {
+                <div class="goal-box">
+                    <div class="goal-icon">📅</div>
+
+                    <div>
+                        <div class="goal-name">Google Calendar підключено</div>
+                        <div class="goal-time">
+                            Тепер HabitFlow може створювати нагадування для звичок у твоєму календарі.
+                        </div>
+                    </div>
+                </div>
+
+                <form asp-controller="GoogleCalendar"
+                      asp-action="Disconnect"
+                      method="post">
+                    @Html.AntiForgeryToken()
+
+                    <button type="submit" class="button button-danger">
+                        Відключити Google Calendar
+                    </button>
+                </form>
+            }
+            else
+            {
+                <div class="empty">
+                    <div class="empty-icon">📅</div>
+                    <div class="empty-title">Google Calendar ще не підключено</div>
+                    <div class="empty-text">
+                        Підключи календар, щоб створювати нагадування для виконання звичок.
+                    </div>
+
+                    <a asp-controller="GoogleCalendar"
+                       asp-action="Connect"
+                       class="button">
+                        Підключити Google Calendar
+                    </a>
+                </div>
+            }
+        </section>
+
+        <section class="card">
+            <div class="title">Редагувати профіль</div>
+
+            <form asp-controller="Profile" asp-action="EditProfile" method="post" class="form-grid">
+                @Html.AntiForgeryToken()
+
+                <input type="hidden" name="TimeZone" value="@timeZone" />
+
+                <div class="form-group">
+                    <label for="Name">Ім'я</label>
+                    <input id="Name" type="text" name="Name" value="@Model.User.Name" required />
+                </div>
+
+                <div>
+                    <button type="submit" class="button">Зберегти</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="card">
+            <div class="title">Змінити пароль</div>
+
+            <form asp-controller="Profile" asp-action="ChangePassword" method="post" class="form-grid">
+                @Html.AntiForgeryToken()
+
+                <div class="form-group">
+                    <label for="CurrentPassword">Поточний пароль</label>
+                    <input id="CurrentPassword" type="password" name="CurrentPassword" required />
+                </div>
+
+                <div class="form-group">
+                    <label for="NewPassword">Новий пароль</label>
+                    <input id="NewPassword" type="password" name="NewPassword" required minlength="6" />
+                </div>
+
+                <div class="form-group">
+                    <label for="ConfirmPassword">Підтвердіть пароль</label>
+                    <input id="ConfirmPassword" type="password" name="ConfirmPassword" required minlength="6" />
+                </div>
+
+                <div>
+                    <button type="submit" class="button">Змінити пароль</button>
+                </div>
+            </form>
+        </section>
+
+        @if (Model.BalanceWheel != null)
+        {
+            <section class="card balance-card">
+                <div class="title balance-title">🧭 Моє колесо балансу</div>
+
+                <div class="balance-clean-layout">
+                    <div class="balance-clean-wheel">
+                        <svg viewBox="0 0 340 340" class="balance-clean-svg">
+                            <circle cx="170" cy="170" r="24" fill="none" stroke="#dcfce7" stroke-width="1" />
+                            <circle cx="170" cy="170" r="48" fill="none" stroke="#dcfce7" stroke-width="1" />
+                            <circle cx="170" cy="170" r="72" fill="none" stroke="#dcfce7" stroke-width="1" />
+                            <circle cx="170" cy="170" r="96" fill="none" stroke="#dcfce7" stroke-width="1" />
+                            <circle cx="170" cy="170" r="120" fill="none" stroke="#dcfce7" stroke-width="1" />
+
+                            <line x1="170" y1="170" x2="170" y2="50" stroke="#dcfce7" stroke-width="1" />
+                            <line x1="170" y1="170" x2="254.9" y2="85.1" stroke="#dcfce7" stroke-width="1" />
+                            <line x1="170" y1="170" x2="290" y2="170" stroke="#dcfce7" stroke-width="1" />
+                            <line x1="170" y1="170" x2="254.9" y2="254.9" stroke="#dcfce7" stroke-width="1" />
+                            <line x1="170" y1="170" x2="170" y2="290" stroke="#dcfce7" stroke-width="1" />
+                            <line x1="170" y1="170" x2="85.1" y2="254.9" stroke="#dcfce7" stroke-width="1" />
+                            <line x1="170" y1="170" x2="50" y2="170" stroke="#dcfce7" stroke-width="1" />
+                            <line x1="170" y1="170" x2="85.1" y2="85.1" stroke="#dcfce7" stroke-width="1" />
+
+                            <polygon points="@wheelPolygonPoints"
+                                     fill="rgba(22, 163, 74, 0.28)"
+                                     stroke="#16a34a"
+                                     stroke-width="5"
+                                     stroke-linejoin="round" />
+
+                            <circle cx="170" cy="170" r="10" fill="#16a34a" />
+                        </svg>
+                    </div>
+
+                    <div class="balance-summary">
+                        <div class="balance-summary-row">
+                            <span>Середній баланс</span>
+                            <strong>@Model.BalanceAverage.ToString("F1") / 10</strong>
+                        </div>
+
+                        <div class="balance-summary-row">
+                            <span>Найсильніша сфера</span>
+                            <strong>@Model.StrongestBalanceArea</strong>
+                        </div>
+
+                        <div class="balance-summary-row">
+                            <span>Потребує уваги</span>
+                            <strong>@Model.WeakestBalanceArea</strong>
+                        </div>
+                    </div>
+                </div>
+
+                @{
+                    var balanceStars = new List<(string Name, int Value)>
+            {
+            ("Здоров’я", Model.BalanceWheel.Health),
+            ("Кар’єра / навчання", Model.BalanceWheel.Career),
+            ("Фінанси", Model.BalanceWheel.Finance),
+            ("Стосунки", Model.BalanceWheel.Relationships),
+            ("Саморозвиток", Model.BalanceWheel.SelfDevelopment),
+            ("Відпочинок", Model.BalanceWheel.Rest),
+            ("Емоційний стан", Model.BalanceWheel.EmotionalState),
+            ("Побут / оточення", Model.BalanceWheel.Environment)
+            };
+                }
+
+                <div class="balance-stars-panel">
+                    <div class="balance-stars-title">⭐ Оцінка сфер за зірочками</div>
+
+                    <div class="balance-stars-grid">
+                        @foreach (var area in balanceStars)
+                        {
+                            <div class="balance-star-row">
+                                <div class="balance-star-name">@area.Name</div>
+
+                                <div class="balance-stars">
+                                    @for (int i = 1; i <= 10; i++)
+                                    {
+                                        if (i <= area.Value)
+                                        {
+                                            <span>★</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="balance-star-empty">☆</span>
+                                        }
+                                    }
+                                </div>
+
+                                <div class="balance-star-score">
+                                    @area.Value/10
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </section>
+        }
+
+        <section class="card">
+            <div class="title">Моя ціль</div>
+
+            @if (Model.User.IsOnboardingCompleted)
+            {
+                <div class="goal-box">
+                    <div class="goal-icon">🚀</div>
+
+                    <div>
+                        <div class="goal-name">@Model.User.OnboardingGoal</div>
+                        <div class="goal-time">@Model.User.OnboardingTime</div>
+                    </div>
+                </div>
+
+                <form asp-controller="Profile" asp-action="UpdateGoal" method="post" class="form-grid">
+                    @Html.AntiForgeryToken()
+
+                    <input type="hidden" name="Description" value="@Model.User.OnboardingDescription" />
+
+                    <div class="form-group">
+                        <label for="Goal">Нова ціль</label>
+                        <input id="Goal"
+                               type="text"
+                               name="Goal"
+                               value="@Model.User.OnboardingGoal"
+                               required />
+                    </div>
+
+                    <div class="form-group">
+                        <label for="AvailableTime">Коли або скільки часу готовий приділяти?</label>
+                        <input id="AvailableTime"
+                               type="text"
+                               name="AvailableTime"
+                               value="@Model.User.OnboardingTime"
+                               placeholder="Наприклад: 20 хвилин щодня ввечері" />
+                    </div>
+
+                    <div>
+                        <button type="submit" class="button">Оновити ціль</button>
+                    </div>
+                </form>
+            }
+            else
+            {
+                <div class="empty">
+                    <div class="empty-icon">🎯</div>
+                    <div class="empty-title">Ціль ще не встановлена</div>
+                    <div class="empty-text">
+                        Встанови свою першу ціль і рухайся до неї у власному темпі.
+                    </div>
+
+                    <a asp-controller="Onboarding" asp-action="Index" class="button">Встановити ціль</a>
+                </div>
+            }
+        </section>
+
+        <section class="card danger-card">
+            <div class="title danger-title">Видалити профіль</div>
+
+            <div class="danger-text">
+                Це назавжди видалить твій акаунт. Для підтвердження введи пароль.
+            </div>
+
+            <form asp-controller="Profile"
+                  asp-action="DeleteProfile"
+                  method="post"
+                  class="form-grid"
+                  onsubmit="return confirm('Точно видалити профіль? Цю дію не можна скасувати.');">
+                @Html.AntiForgeryToken()
+
+                <div class="form-group">
+                    <label for="DeletePassword">Пароль</label>
+                    <input id="DeletePassword"
+                           type="password"
+                           name="Password"
+                           required />
+                </div>
+
+                <div>
+                    <button type="submit" class="button button-danger">
+                        Видалити профіль
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
+</div>
+
+<script>
+    var avatarPhrases = {
+        default: [
+            "Привіт. Я твій маленький помічник у HabitFlow.",
+            "Натискай, я махаю не просто так.",
+            "Сьогодні не треба геройства. Треба один чесний крок.",
+            "Я слідкую за настроєм профілю. Поки що все симпатично."
+        ],
+        calm: [
+            "Спокійний режим увімкнено. Дихаємо і рухаємось.",
+            "Без паніки. Маленький крок теж крок.",
+            "Сьогодні можна м’яко, але чесно.",
+            "Тихий прогрес теж рахується."
+        ],
+        power: [
+            "Режим заряду. Пішли робити красиво.",
+            "Один крок. Потім ще один. Так і будується сила.",
+            "Не ідеально — нормально. Не зупинятись — краще.",
+            "Сьогодні хороший день, щоб не зливати себе."
+        ]
+    };
+
+    var currentAvatarMood = "default";
+    var avatarPhraseIndex = 0;
+
+    function showAvatarPhrase(text) {
+        var speech = document.getElementById("avatarSpeech");
+
+        if (speech) {
+            speech.textContent = text;
+        }
+    }
+
+    function cheerAvatar() {
+        var stage = document.getElementById("avatarStage");
+        var list = avatarPhrases[currentAvatarMood] || avatarPhrases.default;
+
+        avatarPhraseIndex = (avatarPhraseIndex + 1) % list.length;
+        showAvatarPhrase(list[avatarPhraseIndex]);
+
+        if (stage) {
+            stage.classList.remove("avatar-bounce");
+            void stage.offsetWidth;
+            stage.classList.add("avatar-bounce");
+        }
+    }
+
+    function setAvatarMood(mood) {
+        currentAvatarMood = mood;
+        avatarPhraseIndex = 0;
+
+        var list = avatarPhrases[currentAvatarMood] || avatarPhrases.default;
+        showAvatarPhrase(list[0]);
+        cheerAvatar();
+    }
+
+    var quotes = [
+        "Маленький крок сьогодні може стати великим результатом завтра.",
+        "Не потрібно бути ідеальним. Достатньо не здаватися.",
+        "Ти вже ближче до мети, ніж був учора.",
+        "Сила росте тоді, коли ти продовжуєш рухатися.",
+        "Навіть повільний прогрес — це все ще прогрес.",
+        "Твій темп має значення тільки для тебе. Рухайся спокійно.",
+        "Кожен день — це шанс обрати себе ще раз."
+    ];
+
+    var quoteIndex = 0;
+
+    function nextQuote() {
+        quoteIndex = (quoteIndex + 1) % quotes.length;
+        document.getElementById("quoteText").textContent = quotes[quoteIndex];
+    }
+
+    setInterval(nextQuote, 7000);
+</script>

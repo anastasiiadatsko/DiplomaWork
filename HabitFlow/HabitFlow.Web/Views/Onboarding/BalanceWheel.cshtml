@@ -1,0 +1,347 @@
+﻿@model HabitFlow.BLL.DTOs.BalanceWheelDto
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <title>HabitFlow — Колесо балансу</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0fdf4;
+            min-height: 100vh;
+            padding: 32px;
+            color: #111827;
+        }
+
+        .page {
+            max-width: 1180px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 28px;
+            padding: 46px;
+            box-shadow: 0 4px 40px rgba(0,0,0,0.08);
+        }
+
+        .step-badge {
+            background: #dcfce7;
+            color: #16a34a;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 14px;
+            border-radius: 999px;
+            display: inline-block;
+            margin-bottom: 18px;
+        }
+
+        h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            font-size: 15px;
+            margin-bottom: 34px;
+            line-height: 1.6;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 430px 1fr;
+            gap: 46px;
+            align-items: center;
+        }
+
+        .wheel-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: sticky;
+            top: 32px;
+        }
+
+        .balance-svg {
+            width: 410px;
+            height: 410px;
+            overflow: visible;
+            filter: drop-shadow(0 20px 35px rgba(22, 163, 74, 0.14));
+        }
+
+            .balance-svg text {
+                font-size: 10.5px;
+                font-weight: 700;
+                fill: #374151;
+            }
+
+        .grid-circle {
+            fill: none;
+            stroke: #dcfce7;
+            stroke-width: 1.4;
+        }
+
+        .axis-line {
+            stroke: #bbf7d0;
+            stroke-width: 1.4;
+        }
+
+        .sector-label {
+            font-size: 10px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 14px;
+        }
+
+        .balance-row {
+            background: #f9fafb;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 14px;
+            transition: 0.2s;
+        }
+
+            .balance-row:hover {
+                border-color: #bbf7d0;
+                background: #fafffb;
+            }
+
+        .row-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .score {
+            color: #16a34a;
+            font-size: 15px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            accent-color: #16a34a;
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            margin-top: 28px;
+            width: 100%;
+            border: none;
+            background: #16a34a;
+            color: white;
+            padding: 16px;
+            border-radius: 16px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+            .btn-submit:hover {
+                background: #15803d;
+                transform: translateY(-1px);
+            }
+
+        @@media (max-width: 980px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .wheel-box {
+                position: static;
+            }
+
+            .balance-svg {
+                width: 330px;
+                height: 330px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page">
+        <div class="card">
+            <div class="step-badge">Крок 2 із 2</div>
+
+            <h1>Колесо балансу життя</h1>
+
+            <div class="subtitle">
+                Оціни кожну сферу життя від 1 до 10. Форма колеса змінюється автоматично:
+                чим вища оцінка, тим далі сектор від центру.
+            </div>
+
+            <div class="content">
+                <div class="wheel-box">
+                    <svg class="balance-svg" viewBox="0 0 340 340">
+                        <circle class="grid-circle" cx="170" cy="170" r="24"></circle>
+                        <circle class="grid-circle" cx="170" cy="170" r="48"></circle>
+                        <circle class="grid-circle" cx="170" cy="170" r="72"></circle>
+                        <circle class="grid-circle" cx="170" cy="170" r="96"></circle>
+                        <circle class="grid-circle" cx="170" cy="170" r="120"></circle>
+
+                        <line class="axis-line" x1="170" y1="170" x2="170" y2="50" />
+                        <line class="axis-line" x1="170" y1="170" x2="254.9" y2="85.1" />
+                        <line class="axis-line" x1="170" y1="170" x2="290" y2="170" />
+                        <line class="axis-line" x1="170" y1="170" x2="254.9" y2="254.9" />
+                        <line class="axis-line" x1="170" y1="170" x2="170" y2="290" />
+                        <line class="axis-line" x1="170" y1="170" x2="85.1" y2="254.9" />
+                        <line class="axis-line" x1="170" y1="170" x2="50" y2="170" />
+                        <line class="axis-line" x1="170" y1="170" x2="85.1" y2="85.1" />
+
+                        <polygon id="balancePolygon"
+                                 points=""
+                                 fill="rgba(22,163,74,0.32)"
+                                 stroke="#16a34a"
+                                 stroke-width="4"
+                                 stroke-linejoin="round" />
+
+                        <circle cx="170" cy="170" r="8" fill="#16a34a" />
+
+                        <text x="170" y="34" text-anchor="middle">Здоров’я</text>
+                        <text x="272" y="69" text-anchor="middle">Кар’єра</text>
+                        <text x="318" y="174" text-anchor="middle">Фінанси</text>
+                        <text x="278" y="278" text-anchor="middle">Стосунки</text>
+                        <text x="170" y="324" text-anchor="middle">Розвиток</text>
+                        <text x="62" y="278" text-anchor="middle">Відпочинок</text>
+                        <text x="22" y="174" text-anchor="middle">Емоції</text>
+                        <text x="65" y="69" text-anchor="middle">Побут</text>
+                    </svg>
+                </div>
+
+                <form asp-controller="Onboarding" asp-action="BalanceWheel" method="post" class="form-grid">
+
+                    <div class="balance-row">
+                        <div class="row-header">
+                            <span>🏃 Здоров’я</span>
+                            <span class="score" id="healthValue">5</span>
+                        </div>
+                        <input asp-for="Health" type="range" min="1" max="10" value="5"
+                               oninput="healthValue.innerText = this.value; updateBalanceWheel();" />
+                    </div>
+
+                    <div class="balance-row">
+                        <div class="row-header">
+                            <span>🎓 Кар’єра / навчання</span>
+                            <span class="score" id="careerValue">5</span>
+                        </div>
+                        <input asp-for="Career" type="range" min="1" max="10" value="5"
+                               oninput="careerValue.innerText = this.value; updateBalanceWheel();" />
+                    </div>
+
+                    <div class="balance-row">
+                        <div class="row-header">
+                            <span>💰 Фінанси</span>
+                            <span class="score" id="financeValue">5</span>
+                        </div>
+                        <input asp-for="Finance" type="range" min="1" max="10" value="5"
+                               oninput="financeValue.innerText = this.value; updateBalanceWheel();" />
+                    </div>
+
+                    <div class="balance-row">
+                        <div class="row-header">
+                            <span>❤️ Стосунки</span>
+                            <span class="score" id="relationshipsValue">5</span>
+                        </div>
+                        <input asp-for="Relationships" type="range" min="1" max="10" value="5"
+                               oninput="relationshipsValue.innerText = this.value; updateBalanceWheel();" />
+                    </div>
+
+                    <div class="balance-row">
+                        <div class="row-header">
+                            <span>📚 Саморозвиток</span>
+                            <span class="score" id="selfDevelopmentValue">5</span>
+                        </div>
+                        <input asp-for="SelfDevelopment" type="range" min="1" max="10" value="5"
+                               oninput="selfDevelopmentValue.innerText = this.value; updateBalanceWheel();" />
+                    </div>
+
+                    <div class="balance-row">
+                        <div class="row-header">
+                            <span>🌿 Відпочинок</span>
+                            <span class="score" id="restValue">5</span>
+                        </div>
+                        <input asp-for="Rest" type="range" min="1" max="10" value="5"
+                               oninput="restValue.innerText = this.value; updateBalanceWheel();" />
+                    </div>
+
+                    <div class="balance-row">
+                        <div class="row-header">
+                            <span>🧘 Емоційний стан</span>
+                            <span class="score" id="emotionalValue">5</span>
+                        </div>
+                        <input asp-for="EmotionalState" type="range" min="1" max="10" value="5"
+                               oninput="emotionalValue.innerText = this.value; updateBalanceWheel();" />
+                    </div>
+
+                    <div class="balance-row">
+                        <div class="row-header">
+                            <span>🏡 Побут / оточення</span>
+                            <span class="score" id="environmentValue">5</span>
+                        </div>
+                        <input asp-for="Environment" type="range" min="1" max="10" value="5"
+                               oninput="environmentValue.innerText = this.value; updateBalanceWheel();" />
+                    </div>
+
+                    <button type="submit" class="btn-submit">
+                        Завершити онбординг →
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function updateBalanceWheel() {
+            const values = [
+                Number(document.querySelector('[name="Health"]').value),
+                Number(document.querySelector('[name="Career"]').value),
+                Number(document.querySelector('[name="Finance"]').value),
+                Number(document.querySelector('[name="Relationships"]').value),
+                Number(document.querySelector('[name="SelfDevelopment"]').value),
+                Number(document.querySelector('[name="Rest"]').value),
+                Number(document.querySelector('[name="EmotionalState"]').value),
+                Number(document.querySelector('[name="Environment"]').value)
+            ];
+
+            const centerX = 170;
+            const centerY = 170;
+            const maxRadius = 120;
+
+            const points = values.map((value, index) => {
+                const angle = (-90 + index * 45) * Math.PI / 180;
+                const radius = (value / 10) * maxRadius;
+
+                const x = centerX + radius * Math.cos(angle);
+                const y = centerY + radius * Math.sin(angle);
+
+                return `${x.toFixed(1)},${y.toFixed(1)}`;
+            });
+
+            document.getElementById("balancePolygon").setAttribute("points", points.join(" "));
+        }
+
+        updateBalanceWheel();
+    </script>
+
+</body>
+</html>

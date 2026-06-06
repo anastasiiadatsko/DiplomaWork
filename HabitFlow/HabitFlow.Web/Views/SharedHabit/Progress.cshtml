@@ -1,0 +1,303 @@
+﻿@using HabitFlow.BLL.DTOs
+@model List<SharedHabitParticipantProgressDto>
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <title>HabitFlow — Спільний прогрес</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0fdf4;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: white;
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #16a34a;
+            text-decoration: none;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-link {
+            font-size: 14px;
+            color: #374151;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 7px 14px;
+            border-radius: 8px;
+        }
+
+            .nav-link:hover {
+                background: #f3f4f6;
+            }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 24px;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 18px;
+            color: #15803d;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #111827;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 15px;
+            color: #6b7280;
+            margin-bottom: 28px;
+        }
+
+        .progress-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+            margin-bottom: 32px;
+        }
+
+        .participant-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+            border: 1px solid #e5e7eb;
+        }
+
+        .participant-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .participant-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #111827;
+        }
+
+        .owner-badge {
+            background: #fef3c7;
+            color: #d97706;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .today-status {
+            display: inline-block;
+            margin-bottom: 18px;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .done {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .not-done {
+            background: #fef2f2;
+            color: #dc2626;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .stat {
+            background: #f9fafb;
+            border-radius: 14px;
+            padding: 14px 10px;
+            text-align: center;
+        }
+
+        .stat-value {
+            display: block;
+            font-size: 20px;
+            font-weight: 800;
+            color: #111827;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #6b7280;
+        }
+
+        .table-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 4px 18px rgba(0,0,0,0.06);
+            border: 1px solid #e5e7eb;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            font-size: 13px;
+            color: #6b7280;
+            padding: 12px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        td {
+            padding: 14px 12px;
+            font-size: 14px;
+            color: #111827;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
+
+        <div class="nav-links">
+            <a asp-controller="Dashboard" asp-action="Index" class="nav-link">🏠 Дошка звичок</a>
+            <a asp-controller="Habit" asp-action="Index" class="nav-link">📋 Звички</a>
+            <a asp-controller="Auth" asp-action="Logout" class="nav-link">Вийти</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <a asp-controller="Habit" asp-action="Index" class="back-link">← Назад до звичок</a>
+
+        <div class="page-title">👥 Спільний прогрес</div>
+        <div class="page-subtitle">
+            Тут видно, як кожен учасник виконує цю спільну звичку.
+        </div>
+
+        <div class="progress-grid">
+            @foreach (var participant in Model)
+            {
+                <div class="participant-card">
+                    <div class="participant-header">
+                        <div>
+                            <div class="participant-name">@participant.UserName</div>
+                            <div style="font-size:12px;color:#9ca3af;">@participant.UserEmail</div>
+                        </div>
+
+                        @if (participant.IsOwner)
+                        {
+                            <span class="owner-badge">👑 Власник</span>
+                        }
+                    </div>
+
+                    @if (participant.IsCompletedToday)
+                    {
+                        <div class="today-status done">✅ Сьогодні виконано</div>
+                    }
+                    else
+                    {
+                        <div class="today-status not-done">❌ Сьогодні ще не виконано</div>
+                    }
+
+                    <div class="stats">
+                        <div class="stat">
+                            <span class="stat-value">🔥@participant.CurrentStreak</span>
+                            <span class="stat-label">Серія</span>
+                        </div>
+
+                        <div class="stat">
+                            <span class="stat-value">@participant.TotalCompleted</span>
+                            <span class="stat-label">Виконань</span>
+                        </div>
+
+                        <div class="stat">
+                            <span class="stat-value">@participant.ConsistencyRate%</span>
+                            <span class="stat-label">CR</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Учасник</th>
+                        <th>Сьогодні</th>
+                        <th>Поточна серія</th>
+                        <th>Всього виконань</th>
+                        <th>Consistency Rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var participant in Model)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@participant.UserName</strong>
+                                @if (participant.IsOwner)
+                                {
+                                    <span> 👑</span>
+                                }
+                            </td>
+                            <td>@(participant.IsCompletedToday ? "✅ Виконано" : "❌ Не виконано")</td>
+                            <td>@participant.CurrentStreak</td>
+                            <td>@participant.TotalCompleted</td>
+                            <td>@participant.ConsistencyRate%</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

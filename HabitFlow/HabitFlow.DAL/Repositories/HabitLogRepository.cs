@@ -1,0 +1,63 @@
+﻿using HabitFlow.DAL.Context;
+using HabitFlow.Domain.Entities;
+using HabitFlow.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
+
+namespace HabitFlow.DAL.Repositories
+{
+    public class HabitLogRepository : IHabitLogRepository
+    {
+        private readonly AppDbContext context;
+
+        public HabitLogRepository(AppDbContext context)
+        {
+            this.context = context;
+        }
+
+        public async Task<HabitLog?> GetByDateAsync(Guid habitId, DateTime date)
+        {
+            var startOfDay = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+            var nextDay = startOfDay.AddDays(1);
+
+            return await context.HabitLogs
+                .FirstOrDefaultAsync(l =>
+                    l.HabitId == habitId &&
+                    l.ScheduledDate >= startOfDay &&
+                    l.ScheduledDate < nextDay);
+        }
+
+        public async Task<List<HabitLog>> GetByHabitIdAsync(Guid habitId)
+        {
+            return await context.HabitLogs
+                .Where(l => l.HabitId == habitId)
+                .ToListAsync();
+        }
+        public async Task<List<HabitLog>> GetByHabitIdAsync(Guid habitId, Guid userId)
+        {
+            return await context.HabitLogs
+                .Where(l => l.HabitId == habitId && l.UserId == userId)
+                .ToListAsync();
+        }
+
+        public async Task<int> GetCompletedCountByUserIdAsync(Guid userId)
+        {
+            return await context.HabitLogs
+                .CountAsync(l =>
+                    l.UserId == userId &&
+                    l.Status == HabitFlow.Domain.Enums.LogStatus.Completed);
+        }
+
+        public async Task AddAsync(HabitLog log)
+        {
+            await context.HabitLogs.AddAsync(log);
+            await context.SaveChangesAsync();
+        }
+
+        public async Task UpdateAsync(HabitLog log)
+        {
+            context.HabitLogs.Update(log);
+            await context.SaveChangesAsync();
+        }
+
+    }
+}

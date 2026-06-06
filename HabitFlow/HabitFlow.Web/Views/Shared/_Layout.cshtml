@@ -1,0 +1,216 @@
+﻿<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — HabitFlow</title>
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f0fdf4;
+        }
+
+        .navbar {
+            background: white;
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: #16a34a;
+            text-decoration: none;
+        }
+
+            .logo:hover {
+                color: #16a34a;
+            }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .nav-link {
+            font-size: 14px;
+            color: #374151 !important;
+            text-decoration: none;
+            font-weight: 500;
+            padding: 7px 14px;
+            border-radius: 8px;
+            transition: background 0.15s;
+        }
+
+            .nav-link:hover {
+                background: #f3f4f6;
+                color: #374151 !important;
+            }
+
+            .nav-link.active {
+                background: #dcfce7;
+                color: #16a34a !important;
+            }
+
+        .btn-logout {
+            padding: 8px 16px;
+            background: #f3f4f6;
+            color: #374151 !important;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+            .btn-logout:hover {
+                background: #e5e7eb;
+                color: #374151 !important;
+            }
+
+        .btn-register {
+            background: #16a34a;
+            color: white !important;
+            border-radius: 8px;
+            padding: 8px 18px !important;
+            font-weight: 600 !important;
+        }
+
+            .btn-register:hover {
+                background: #15803d;
+            }
+
+        .btn-login {
+            border: 1.5px solid #16a34a;
+            color: #16a34a !important;
+            border-radius: 8px;
+            padding: 7px 18px !important;
+            font-weight: 600 !important;
+        }
+
+        .btn-register {
+            background: #16a34a;
+            color: white !important;
+            border-radius: 8px;
+            padding: 8px 18px !important;
+            font-weight: 600 !important;
+        }
+
+            .btn-register:hover {
+                background: #15803d;
+            }
+
+        .btn-login {
+            border: 1.5px solid #16a34a;
+            color: #16a34a !important;
+            border-radius: 8px;
+            padding: 7px 18px !important;
+            font-weight: 600 !important;
+        }
+
+        .btn-logout {
+            padding: 8px 16px !important;
+            background: #f3f4f6;
+            color: #374151 !important;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+        }
+
+        .profile-link {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+    </style>
+</head>
+
+<body>
+    @Html.AntiForgeryToken()
+    <header>
+        <nav class="navbar">
+            <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
+
+            <div class="nav-links">
+                @if (Context.Session.GetString("UserId") != null)
+                {
+                    <a asp-controller="Dashboard"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Dashboard" ? "active" : "")">
+                        🏠 Дошка звичок
+                    </a>
+
+                    <a asp-controller="Habit"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Habit" ? "active" : "")">
+                        📋 Мої звички
+                    </a>
+
+                    <a asp-controller="BalanceConstellation"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "BalanceConstellation" ? "active" : "")">
+                        ✨ Сузір’я балансу
+                    </a>
+
+                    <a asp-controller="Coach"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Coach" ? "active" : "")">
+                        🤖 Агент
+                    </a>
+
+                    <a asp-controller="Profile"
+                       asp-action="Index"
+                       class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Profile" ? "active" : "")">
+                        👤 @Context.Session.GetString("UserName")
+                    </a>
+
+
+                    <a asp-controller="Auth"
+                       asp-action="Logout"
+                       class="btn-logout">
+                        Вийти
+                    </a>
+                }
+                else
+                {
+                    <a asp-controller="Auth"
+                       asp-action="Login"
+                       class="nav-link btn-login">
+                        Увійти
+                    </a>
+
+                    <a asp-controller="Auth"
+                       asp-action="Register"
+                       class="nav-link btn-register">
+                        Зареєструватись
+                    </a>
+                }
+            </div>
+        </nav>
+    </header>
+
+    <div>
+        @RenderBody()
+    </div>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
+
+</body>
+</html>
