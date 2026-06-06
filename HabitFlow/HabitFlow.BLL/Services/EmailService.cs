@@ -1,8 +1,7 @@
-﻿using System.Net;
-using System.Net.Mail;
-using HabitFlow.BLL.Interfaces;
+﻿using HabitFlow.BLL.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using Resend;
 
 namespace HabitFlow.BLL.Services
 {
@@ -10,11 +9,16 @@ namespace HabitFlow.BLL.Services
     {
         private readonly IConfiguration configuration;
         private readonly ILogger<EmailService> logger;
+        private readonly IResend resend;
 
-        public EmailService(IConfiguration configuration, ILogger<EmailService> logger)
+        public EmailService(
+            IConfiguration configuration,
+            ILogger<EmailService> logger,
+            IResend resend)
         {
             this.configuration = configuration;
             this.logger = logger;
+            this.resend = resend;
         }
 
         public async Task SendConfirmationEmailAsync(
@@ -58,36 +62,25 @@ namespace HabitFlow.BLL.Services
             await SendEmailAsync(toEmail, subject, body);
         }
 
-        // 🔥 ОДИН метод для відправки (best practice)
         private async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            var from = configuration["Email:From"]!;
-            var password = configuration["Email:Password"]!;
-            var displayName = configuration["Email:DisplayName"]!;
+            var from = this.configuration["Resend:From"]!;
+            var displayName = this.configuration["Resend:DisplayName"] ?? "HabitFlow";
 
-            using var smtpClient = new SmtpClient("smtp.gmail.com")
+            var message = new EmailMessage
             {
-                Port = 587,
-                Credentials = new NetworkCredential(from, password),
-                EnableSsl = true,
-            };
-
-            using var mailMessage = new MailMessage
-            {
-                From = new MailAddress(from, displayName),
+                From = $"{displayName} <{from}>",
+                To = new[] { toEmail },
                 Subject = subject,
-                Body = body,
-                IsBodyHtml = true,
+                HtmlBody = body,
             };
 
-            mailMessage.To.Add(toEmail);
+            await this.resend.EmailSendAsync(message);
 
-            await smtpClient.SendMailAsync(mailMessage);
-
-            logger.LogInformation("Email sent to {Email}", toEmail);
+            this.logger.LogInformation("Email sent to {Email}", toEmail);
         }
 
-        // ✅ ПІДТВЕРДЖЕННЯ
+        // ПІДТВЕРДЖЕННЯ
         private string BuildConfirmationEmailBody(string userName, string link)
         {
             return BuildTemplate(
@@ -99,7 +92,7 @@ namespace HabitFlow.BLL.Services
             );
         }
 
-        // 🔐 RESET PASSWORD
+        //  RESET PASSWORD
         private string BuildPasswordResetEmailBody(string userName, string link)
         {
             return BuildTemplate(
@@ -195,7 +188,7 @@ style='background:#ef4444; color:#fff; padding:14px 24px; border-radius:10px; te
 </html>";
         }
 
-        // 🔥 ОДИН ШАБЛОН (reuse — як у топ проектах)
+        //  ОДИН ШАБЛОН 
         private string BuildTemplate(
             string userName,
             string title,

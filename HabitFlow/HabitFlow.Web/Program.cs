@@ -5,6 +5,7 @@ using HabitFlow.DAL.Repositories;
 using HabitFlow.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using Resend;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,7 +16,7 @@ if (!string.IsNullOrEmpty(port))
     builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
 }
 
-Log.Logger = new LoggerConfiguration()
+Serilog.Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/habitflow.txt", rollingInterval: RollingInterval.Day)
     .CreateLogger();
@@ -45,6 +46,17 @@ builder.Services.AddHttpClient<CoachService>();
 builder.Services.AddScoped<ICoachService, CoachService>();
 builder.Services.AddHttpClient<IQuitCoachService, QuitCoachService>();
 builder.Services.AddHttpClient<IGoogleCalendarService, GoogleCalendarService>();
+
+builder.Services.AddOptions();
+
+builder.Services.AddHttpClient<ResendClient>();
+
+builder.Services.Configure<ResendClientOptions>(options =>
+{
+    options.ApiToken = builder.Configuration["Resend:ApiKey"]!;
+});
+
+builder.Services.AddTransient<IResend, ResendClient>();
 
 builder.Configuration.AddUserSecrets<Program>();
 
