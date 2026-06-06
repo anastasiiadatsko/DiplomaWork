@@ -82,8 +82,9 @@ app.Use(async (context, next) =>
         var log = context.RequestServices
             .GetRequiredService<ILogger<Program>>();
         log.LogInformation(
-            "VoiceStream: IsHttps={IsHttps}, IsWebSocket={IsWs}",
-            context.WebSockets.IsWebSocketRequest);
+    "VoiceStream: IsHttps={IsHttps}, IsWebSocket={IsWs}",
+    context.Request.IsHttps,
+    context.WebSockets.IsWebSocketRequest);
     }
 
     await next();
