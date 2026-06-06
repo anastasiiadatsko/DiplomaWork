@@ -164,6 +164,78 @@
             .btn-submit:hover {
                 background: #15803d;
             }
+
+        /* MOBILE LOGIN FIX */
+        @@media (max-width: 768px) {
+            html,
+            body {
+                width: 100%;
+                min-height: 100vh;
+                overflow-x: hidden;
+            }
+
+            body {
+                padding: 0;
+                align-items: center;
+                justify-content: center;
+            }
+
+            .page-wrapper {
+                width: calc(100% - 28px) !important;
+                max-width: 420px !important;
+                min-width: 0 !important;
+                margin: 20px auto !important;
+                display: block !important;
+                border-radius: 24px !important;
+                overflow: hidden !important;
+            }
+
+            .left-panel {
+                display: none !important;
+            }
+
+            .right-panel {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                padding: 30px 22px !important;
+                display: block !important;
+            }
+
+            .form-header h2 {
+                font-size: 25px !important;
+                line-height: 1.2 !important;
+            }
+
+            .form-header p {
+                font-size: 13px !important;
+                line-height: 1.4 !important;
+            }
+
+            form,
+            .form-group {
+                width: 100% !important;
+            }
+
+            input {
+                width: 100% !important;
+                max-width: 100% !important;
+                font-size: 14px !important;
+            }
+
+            .btn-submit {
+                width: 100% !important;
+            }
+
+            .page-wrapper > div[style] {
+                width: 100% !important;
+                padding: 0 22px 24px !important;
+                margin: 0 !important;
+                text-align: center !important;
+            }
+        }
+
+
     </style>
 </head>
 <body>
