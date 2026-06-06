@@ -915,7 +915,8 @@
             liveNextStartTime = 0;
             liveHasAudio = false;
 
-            const wsUrl = `ws://localhost:5153/Coach/VoiceStream/${HABIT_ID}?userId=${userId}`;
+            const proto = window.location.protocol === "https:" ? "wss" : "ws";
+            const wsUrl = `${proto}://${window.location.host}/Coach/VoiceStream/${HABIT_ID}?userId=${encodeURIComponent(userId)}`;
 
             console.log('URL:', wsUrl);
 
