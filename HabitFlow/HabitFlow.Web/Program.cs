@@ -8,6 +8,13 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var port = Environment.GetEnvironmentVariable("PORT");
+
+if (!string.IsNullOrEmpty(port))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+}
+
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
     .WriteTo.File("logs/habitflow.txt", rollingInterval: RollingInterval.Day)
@@ -68,8 +75,6 @@ app.UseWebSockets(new WebSocketOptions
 
 app.Use(async (context, next) =>
 {
-    var port = context.Connection.LocalPort;
-    var isHttps = context.Request.IsHttps;
     var path = context.Request.Path;
 
     if (path.StartsWithSegments("/Coach/VoiceStream"))
@@ -77,23 +82,9 @@ app.Use(async (context, next) =>
         var log = context.RequestServices
             .GetRequiredService<ILogger<Program>>();
         log.LogInformation(
-            "VoiceStream: Port={Port}, IsHttps={IsHttps}, IsWebSocket={IsWs}",
-            port, isHttps, context.WebSockets.IsWebSocketRequest);
-    }
-
-    if (!isHttps && port == 5153)
-    {
-        await next();
-        return;
-    }
-
-    if (!isHttps)
-    {
-        var httpsUrl = $"https://{context.Request.Host.Host}:7060"
-            + context.Request.Path
-            + context.Request.QueryString;
-        context.Response.Redirect(httpsUrl, permanent: false);
-        return;
+    "VoiceStream: IsHttps={IsHttps}, IsWebSocket={IsWs}",
+    context.Request.IsHttps,
+    context.WebSockets.IsWebSocketRequest);
     }
 
     await next();
