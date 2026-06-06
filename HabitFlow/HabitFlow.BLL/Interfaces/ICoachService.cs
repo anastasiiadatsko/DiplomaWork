@@ -14,5 +14,6 @@ namespace HabitFlow.BLL.Interfaces
 
         Task<CoachSummaryResponse> GetSessionSummaryAsync(
             Guid userId, CoachSummaryRequest request);
+        Task<AnalyticsViewModel> GetHabitAnalyticsForVoiceAsync(Guid habitId, Guid userId);
     }
 }

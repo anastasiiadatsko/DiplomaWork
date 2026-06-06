@@ -3,6 +3,8 @@
 @model List<HabitDto>
 @{
     Layout = null;
+    var regularHabits = Model.Where(h => h.Mode != HabitMode.Quit).ToList();
+    var quitHabits = Model.Where(h => h.Mode == HabitMode.Quit).ToList();
 }
 <!DOCTYPE html>
 <html lang="uk">
@@ -12,356 +14,390 @@
     <title>HabitFlow — Мої звички</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f0fdf4;
-            min-height: 100vh;
-        }
+            body {
+                font-family: 'Inter', sans-serif;
+                background: #f0fdf4;
+                min-height: 100vh;
+            }
 
-        .navbar {
-            background: white;
-            padding: 14px 32px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 1px 8px rgba(0,0,0,0.06);
-        }
+            .navbar {
+                background: white;
+                padding: 14px 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+            }
 
-        .logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: #16a34a;
-            text-decoration: none;
-        }
+            .logo {
+                font-size: 20px;
+                font-weight: 700;
+                color: #16a34a;
+                text-decoration: none;
+            }
 
-        .nav-links {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
+            .nav-links {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
 
-        .nav-link {
-            font-size: 14px;
-            color: #374151;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 7px 14px;
-            border-radius: 8px;
-        }
+            .nav-link {
+                font-size: 14px;
+                color: #374151;
+                text-decoration: none;
+                font-weight: 500;
+                padding: 7px 14px;
+                border-radius: 8px;
+            }
 
-            .nav-link:hover {
+                .nav-link:hover {
+                    background: #f3f4f6;
+                }
+
+                .nav-link.active {
+                    background: #dcfce7;
+                    color: #16a34a;
+                }
+
+            .btn-logout {
+                padding: 8px 16px;
                 background: #f3f4f6;
+                color: #374151;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 500;
+                text-decoration: none;
             }
 
-            .nav-link.active {
-                background: #dcfce7;
-                color: #16a34a;
+            .container {
+                max-width: 900px;
+                margin: 32px auto;
+                padding: 0 24px;
             }
 
-        .btn-logout {
-            padding: 8px 16px;
-            background: #f3f4f6;
-            color: #374151;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            text-decoration: none;
-        }
-
-        .container {
-            max-width: 900px;
-            margin: 32px auto;
-            padding: 0 24px;
-        }
-
-        .page-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 24px;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #111827;
-        }
-
-        .btn-add {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 10px 20px;
-            background: #16a34a;
-            color: white;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 600;
-            text-decoration: none;
-        }
-
-            .btn-add:hover {
-                background: #15803d;
+            .page-header {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 24px;
             }
 
-        .toast {
-            padding: 12px 16px;
-            border-radius: 10px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            font-weight: 500;
-        }
-
-        .toast-success {
-            background: #dcfce7;
-            color: #15803d;
-            border: 1px solid #bbf7d0;
-        }
-
-        /* FILTER TABS */
-        .filter-tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-
-        .filter-tab {
-            padding: 7px 16px;
-            border-radius: 100px;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            border: 1.5px solid #e5e7eb;
-            background: white;
-            color: #374151;
-            transition: all 0.15s;
-        }
-
-            .filter-tab:hover {
-                border-color: #16a34a;
-                color: #16a34a;
+            .page-title {
+                font-size: 24px;
+                font-weight: 700;
+                color: #111827;
             }
 
-            .filter-tab.active {
+            .btn-add {
+                display: inline-flex;
+                align-items: center;
+                gap: 8px;
+                padding: 10px 20px;
                 background: #16a34a;
                 color: white;
-                border-color: #16a34a;
+                border-radius: 10px;
+                font-size: 14px;
+                font-weight: 600;
+                text-decoration: none;
             }
 
-        /* HABITS TABLE */
-        .habits-container {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
+                .btn-add:hover {
+                    background: #15803d;
+                }
 
-        .habit-card {
-            background: white;
-            border-radius: 16px;
-            padding: 18px 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            border: 1.5px solid #f3f4f6;
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            transition: all 0.2s;
-        }
-
-            .habit-card:hover {
-                border-color: #e5e7eb;
-                box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+            .toast {
+                padding: 12px 16px;
+                border-radius: 10px;
+                margin-bottom: 16px;
+                font-size: 14px;
+                font-weight: 500;
             }
 
-            .habit-card.paused {
-                opacity: 0.6;
+            .toast-success {
+                background: #dcfce7;
+                color: #15803d;
+                border: 1px solid #bbf7d0;
             }
 
-        .habit-color-bar {
-            width: 4px;
-            height: 48px;
-            border-radius: 2px;
-            flex-shrink: 0;
-        }
-
-        .habit-main {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .habit-name {
-            font-size: 16px;
-            font-weight: 600;
-            color: #111827;
-            margin-bottom: 4px;
-        }
-
-        .habit-desc {
-            font-size: 13px;
-            color: #9ca3af;
-            margin-bottom: 8px;
-        }
-
-        .habit-tags {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            font-size: 11px;
-            font-weight: 500;
-            padding: 3px 9px;
-            border-radius: 100px;
-        }
-
-        .tag-cat {
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-        .tag-freq {
-            background: #dbeafe;
-            color: #1d4ed8;
-        }
-
-        .tag-paused {
-            background: #fef3c7;
-            color: #d97706;
-        }
-
-        .tag-shared {
-            background: #ecfdf5;
-            color: #15803d;
-            border: 1px solid #bbf7d0;
-        }
-
-        .tag-owner {
-            background: #fef3c7;
-            color: #d97706;
-        }
-
-        .habit-stats {
-            display: flex;
-            gap: 20px;
-            flex-shrink: 0;
-        }
-
-        .habit-stat {
-            text-align: center;
-        }
-
-        .habit-stat-val {
-            font-size: 18px;
-            font-weight: 700;
-            color: #111827;
-            display: block;
-        }
-
-        .habit-stat-label {
-            font-size: 10px;
-            color: #9ca3af;
-        }
-
-        .habit-actions {
-            display: flex;
-            gap: 6px;
-            flex-shrink: 0;
-        }
-
-        .action-btn {
-            padding: 7px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            border: none;
-            font-family: 'Inter', sans-serif;
-            transition: all 0.15s;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-        }
-
-        .btn-edit {
-            background: #f3f4f6;
-            color: #374151;
-        }
-
-            .btn-edit:hover {
-                background: #e5e7eb;
+            .section-header {
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 14px;
+                margin-top: 28px;
             }
 
-        .btn-pause {
-            background: #fef9c3;
-            color: #ca8a04;
-        }
-
-            .btn-pause:hover {
-                background: #fef08a;
+            .section-title {
+                font-size: 13px;
+                font-weight: 700;
+                color: #6b7280;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
             }
 
-        .btn-delete {
-            background: #fef2f2;
-            color: #dc2626;
-        }
-
-        .btn-clean {
-            background: #dcfce7;
-            color: #15803d;
-        }
-
-            .btn-clean:hover {
-                background: #bbf7d0;
+            .section-badge {
+                font-size: 11px;
+                font-weight: 700;
+                padding: 2px 8px;
+                border-radius: 100px;
             }
 
-        .btn-craving {
-            background: #fef3c7;
-            color: #d97706;
-        }
-
-            .btn-craving:hover {
-                background: #fde68a;
+            .badge-green {
+                background: #dcfce7;
+                color: #15803d;
             }
 
-        .btn-relapse {
-            background: #fee2e2;
-            color: #dc2626;
-        }
-
-            .btn-relapse:hover {
-                background: #fecaca;
-            }
-
-            .btn-delete:hover {
+            .badge-red {
                 background: #fee2e2;
+                color: #dc2626;
             }
 
-        .empty-state {
-            text-align: center;
-            padding: 80px 24px;
-            background: white;
-            border-radius: 20px;
-        }
+            .habits-container {
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
 
-        .empty-icon {
-            font-size: 56px;
-            margin-bottom: 16px;
-        }
+            .habit-card {
+                background: white;
+                border-radius: 16px;
+                padding: 18px 20px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+                border: 1.5px solid #f3f4f6;
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                transition: all 0.2s;
+            }
 
-        .empty-state p {
-            font-size: 16px;
-            color: #6b7280;
-            margin-bottom: 20px;
-        }
+                .habit-card:hover {
+                    border-color: #e5e7eb;
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+                }
+
+                .habit-card.paused {
+                    opacity: 0.6;
+                }
+
+                .habit-card.quit-card {
+                    border-color: #fee2e2;
+                    background: #fff8f8;
+                }
+
+                    .habit-card.quit-card:hover {
+                        border-color: #fca5a5;
+                    }
+
+            .habit-color-bar {
+                width: 4px;
+                height: 48px;
+                border-radius: 2px;
+                flex-shrink: 0;
+            }
+
+            .habit-main {
+                flex: 1;
+                min-width: 0;
+            }
+
+            .habit-name {
+                font-size: 16px;
+                font-weight: 600;
+                color: #111827;
+                margin-bottom: 4px;
+            }
+
+            .habit-desc {
+                font-size: 13px;
+                color: #9ca3af;
+                margin-bottom: 8px;
+            }
+
+            .habit-tags {
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+            }
+
+            .tag {
+                display: inline-flex;
+                align-items: center;
+                gap: 4px;
+                font-size: 11px;
+                font-weight: 500;
+                padding: 3px 9px;
+                border-radius: 100px;
+            }
+
+            .tag-cat {
+                background: #f3f4f6;
+                color: #374151;
+            }
+
+            .tag-freq {
+                background: #dbeafe;
+                color: #1d4ed8;
+            }
+
+            .tag-quit {
+                background: #fee2e2;
+                color: #dc2626;
+            }
+
+            .tag-paused {
+                background: #fef3c7;
+                color: #d97706;
+            }
+
+            .tag-shared {
+                background: #ecfdf5;
+                color: #15803d;
+                border: 1px solid #bbf7d0;
+            }
+
+            .tag-owner {
+                background: #fef3c7;
+                color: #d97706;
+            }
+
+            .habit-stats {
+                display: flex;
+                gap: 20px;
+                flex-shrink: 0;
+            }
+
+            .habit-stat {
+                text-align: center;
+            }
+
+            .habit-stat-val {
+                font-size: 18px;
+                font-weight: 700;
+                color: #111827;
+                display: block;
+            }
+
+            .habit-stat-label {
+                font-size: 10px;
+                color: #9ca3af;
+            }
+
+            .habit-actions {
+                display: flex;
+                gap: 6px;
+                flex-shrink: 0;
+                flex-wrap: wrap;
+                justify-content: flex-end;
+            }
+
+            .action-btn {
+                padding: 7px 12px;
+                border-radius: 8px;
+                font-size: 12px;
+                font-weight: 500;
+                cursor: pointer;
+                border: none;
+                font-family: 'Inter', sans-serif;
+                transition: all 0.15s;
+                text-decoration: none;
+                display: inline-flex;
+                align-items: center;
+            }
+
+            .btn-edit {
+                background: #f3f4f6;
+                color: #374151;
+            }
+
+                .btn-edit:hover {
+                    background: #e5e7eb;
+                }
+
+            .btn-pause {
+                background: #fef9c3;
+                color: #ca8a04;
+            }
+
+                .btn-pause:hover {
+                    background: #fef08a;
+                }
+
+            .btn-delete {
+                background: #fef2f2;
+                color: #dc2626;
+            }
+
+                .btn-delete:hover {
+                    background: #fee2e2;
+                }
+
+            .btn-clean {
+                background: #dcfce7;
+                color: #15803d;
+            }
+
+                .btn-clean:hover {
+                    background: #bbf7d0;
+                }
+
+            .btn-craving {
+                background: #fef3c7;
+                color: #d97706;
+            }
+
+                .btn-craving:hover {
+                    background: #fde68a;
+                }
+
+            .btn-relapse {
+                background: #fee2e2;
+                color: #dc2626;
+            }
+
+                .btn-relapse:hover {
+                    background: #fecaca;
+                }
+
+            .btn-agent {
+                background: #fdf4ff;
+                color: #9333ea;
+                border: 1px solid #e9d5ff;
+            }
+
+                .btn-agent:hover {
+                    background: #f3e8ff;
+                }
+
+            .empty-state {
+                text-align: center;
+                padding: 60px 24px;
+                background: white;
+                border-radius: 20px;
+            }
+
+            .empty-icon {
+                font-size: 48px;
+                margin-bottom: 12px;
+            }
+
+            .empty-state p {
+                font-size: 15px;
+                color: #6b7280;
+                margin-bottom: 16px;
+            }
+
+            .divider-section {
+                border: none;
+                border-top: 2px dashed #e5e7eb;
+                margin: 8px 0 20px;
+            }
     </style>
 </head>
 <body>
@@ -371,7 +407,7 @@
         <div class="nav-links">
             <a asp-controller="Dashboard" asp-action="Index" class="nav-link">🏠 Дошка звичок</a>
             <a asp-controller="Habit" asp-action="Index" class="nav-link active">📋 Мої звички</a>
-            <a asp-controller="BalanceConstellation" asp-action="Index" class="nav-link">✨ Сузір’я балансу</a>
+            <a asp-controller="BalanceConstellation" asp-action="Index" class="nav-link">✨ Сузір'я балансу</a>
             <a asp-controller="Coach" asp-action="Index" class="nav-link">🤖 Агент</a>
             <a asp-controller="Profile" asp-action="Index" class="nav-link">👤 Профіль</a>
             <a asp-controller="Auth" asp-action="Logout" class="btn-logout">Вийти</a>
@@ -386,29 +422,12 @@
         }
         @if (TempData["Error"] != null)
         {
-            <div class="toast" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca">
-                ⚠ @TempData["Error"]
-            </div>
+            <div class="toast" style="background:#fef2f2;color:#dc2626;border:1px solid #fecaca">⚠ @TempData["Error"]</div>
         }
 
         <div class="page-header">
-            <div>
-                <div class="page-title">📋 Мої звички</div>
-            </div>
+            <div class="page-title">📋 Мої звички</div>
             <a asp-controller="Habit" asp-action="Create" class="btn-add">+ Нова звичка</a>
-        </div>
-
-        <!-- FILTER TABS -->
-        <div class="filter-tabs">
-            <button class="filter-tab active" onclick="filterHabits('all', this)">
-                Всі (@Model.Count)
-            </button>
-            <button class="filter-tab" onclick="filterHabits('active', this)">
-                Активні (@Model.Count(h => h.IsActive))
-            </button>
-            <button class="filter-tab" onclick="filterHabits('paused', this)">
-                Пауза (@Model.Count(h => !h.IsActive))
-            </button>
         </div>
 
         @if (!Model.Any())
@@ -421,205 +440,160 @@
         }
         else
         {
-            <div class="habits-container" id="habitsList">
-                @foreach (var habit in Model)
-                {
-                    <div class="habit-card @(!habit.IsActive ? "paused" : "")"
-                         data-status="@(habit.IsActive ? "active" : "paused")">
-
-                        <div class="habit-color-bar" style="background:@habit.Color"></div>
-
-                        <div class="habit-main">
-                            <div class="habit-name">@habit.Name</div>
-                            @if (!string.IsNullOrEmpty(habit.Description))
-                            {
-                                <div class="habit-desc">@habit.Description</div>
-                            }
-                            <div class="habit-tags">
-                                <span class="tag tag-cat">@habit.Category</span>
-
-                                <span class="tag tag-freq">
-                                    @(habit.FrequencyType == HabitFlow.Domain.Enums.FrequencyType.Daily
-                                        ? "Щодня"
-                                        : habit.FrequencyType == HabitFlow.Domain.Enums.FrequencyType.Weekly
-                                        ? "Щотижня"
-                                        : "Конкретні дні")
-                                </span>
-
-                                @if (habit.IsShared)
+            @if (regularHabits.Any())
+            {
+                <div class="section-header">
+                    <div class="section-title">Формую звички</div>
+                    <span class="section-badge badge-green">@regularHabits.Count</span>
+                </div>
+                <div class="habits-container">
+                    @foreach (var habit in regularHabits)
+                    {
+                        <div class="habit-card @(!habit.IsActive ? "paused" : "")">
+                            <div class="habit-color-bar" style="background:@habit.Color"></div>
+                            <div class="habit-main">
+                                <div class="habit-name">@habit.Name</div>
+                                @if (!string.IsNullOrEmpty(habit.Description))
                                 {
-                                    <span class="tag tag-shared">
-                                        👥 Спільна · @habit.ParticipantsCount учасники
+                                    <div class="habit-desc">@habit.Description</div>
+                                }
+                                <div class="habit-tags">
+                                    <span class="tag tag-cat">@habit.Category</span>
+                                    <span class="tag tag-freq">
+                                        @(habit.FrequencyType == FrequencyType.Daily ? "Щодня"
+                                            : habit.FrequencyType == FrequencyType.Weekly ? "Щотижня"
+                                            : "Конкретні дні")
                                     </span>
-                                }
-
-                                @if (habit.IsShared && habit.IsOwner)
-                                {
-                                    <span class="tag tag-owner">
-                                        👑 Власник
-                                    </span>
-                                }
-
-                                @if (habit.Mode == HabitMode.Quit)
-                                {
-                                    <span class="tag tag-paused">🚭 Відмова</span>
-                                }
-
-                                @if (!habit.IsActive)
-                                {
-                                    <span class="tag tag-paused">⏸ Пауза</span>
-                                }
+                                    @if (habit.IsShared)
+                                    {
+                                        <span class="tag tag-shared">👥 Спільна · @habit.ParticipantsCount учасники</span>
+                                    }
+                                    @if (habit.IsShared && habit.IsOwner)
+                                    {
+                                        <span class="tag tag-owner">👑 Власник</span>
+                                    }
+                                    @if (!habit.IsActive)
+                                    {
+                                        <span class="tag tag-paused">⏸ Пауза</span>
+                                    }
+                                </div>
                             </div>
-                        </div>
-
-                        <div class="habit-stats">
-                            @if (habit.Mode == HabitMode.Quit)
-                            {
+                            <div class="habit-stats">
                                 <div class="habit-stat">
-                                    <span class="habit-stat-val">
-                                        @(habit.CleanDays > 0 ? $"🟢{habit.CleanDays}" : "—")
-                                    </span>
-                                    <span class="habit-stat-label">Чисті дні</span>
-                                </div>
-
-                                <div class="habit-stat">
-                                    <span class="habit-stat-val">💪@habit.DefeatedCravings</span>
-                                    <span class="habit-stat-label">Потяги</span>
-                                </div>
-
-                                <div class="habit-stat">
-                                    <span class="habit-stat-val">❌@habit.RelapsesCount</span>
-                                    <span class="habit-stat-label">Зриви</span>
-                                </div>
-
-                                <div class="habit-stat">
-                                    <span class="habit-stat-val">@habit.AverageCravingLevel</span>
-                                    <span class="habit-stat-label">Сер. потяг</span>
-                                </div>
-                            }
-                            else
-                            {
-                                <div class="habit-stat">
-                                    <span class="habit-stat-val">
-                                        @(habit.CurrentStreak > 0 ? $"🔥{habit.CurrentStreak}" : "—")
-                                    </span>
+                                    <span class="habit-stat-val">@(habit.CurrentStreak > 0 ? $"🔥{habit.CurrentStreak}" : "—")</span>
                                     <span class="habit-stat-label">Серія</span>
                                 </div>
-
                                 <div class="habit-stat">
                                     <span class="habit-stat-val">@habit.ConsistencyRate%</span>
                                     <span class="habit-stat-label">Регулярність</span>
                                 </div>
-                            }
+                            </div>
+                            <div class="habit-actions">
+                                @if (habit.IsOwner)
+                                {
+                                    <a asp-controller="Habit" asp-action="Edit" asp-route-id="@habit.Id" class="action-btn btn-edit">✏️</a>
+                                    <form asp-controller="Habit" asp-action="Pause" asp-route-id="@habit.Id" method="post" style="display:inline">
+                                        <button type="submit" class="action-btn btn-pause">@(habit.IsActive ? "⏸" : "▶️")</button>
+                                    </form>
+                                    <form asp-controller="Habit" asp-action="Delete" asp-route-id="@habit.Id" method="post" style="display:inline"
+                                          onsubmit="return confirm('Видалити звичку «@habit.Name»?')">
+                                        <button type="submit" class="action-btn btn-delete">🗑️</button>
+                                    </form>
+                                }
+                                @if (habit.IsShared)
+                                {
+                                    <a asp-controller="SharedHabit" asp-action="Progress" asp-route-habitId="@habit.Id"
+                                       class="action-btn" style="background:#dcfce7;color:#15803d">👥</a>
+                                }
+                                @if (habit.ReminderTime.HasValue)
+                                {
+                                    <a asp-controller="Habit" asp-action="AddToGoogleCalendar" asp-route-id="@habit.Id"
+                                       class="action-btn" target="_blank" style="background:#dbeafe;color:#1d4ed8">📅</a>
+                                }
+                                <a asp-controller="Analytics" asp-action="Index" asp-route-habitId="@habit.Id"
+                                   class="action-btn" style="background:#ede9fe;color:#7c3aed">📊</a>
+                            </div>
                         </div>
+                    }
+                </div>
+            }
 
-                        <div class="habit-actions">
-
-                            @if (habit.Mode == HabitMode.Quit && habit.IsActive)
-                            {
-                                <form asp-controller="QuitHabit"
-                                      asp-action="LogCleanDay"
-                                      method="post"
-                                      style="display:inline">
-                                    <input type="hidden" name="habitId" value="@habit.Id" />
-                                    <button type="submit" class="action-btn btn-clean"
-                                            title="Зафіксувати чистий день">
-                                        ✅ Чистий
-                                    </button>
-                                </form>
-
-                                <form asp-controller="QuitHabit"
-                                      asp-action="LogCraving"
-                                      method="post"
-                                      style="display:inline">
-                                    <input type="hidden" name="habitId" value="@habit.Id" />
-                                    <input type="hidden" name="CravingLevel" value="5" />
-                                    <input type="hidden" name="TriggerType" value="Other" />
-                                    <button type="submit" class="action-btn btn-craving"
-                                            title="Зафіксувати потяг без зриву">
-                                        ⚠️ Потяг
-                                    </button>
-                                </form>
-
-                                <form asp-controller="QuitHabit"
-                                      asp-action="LogRelapse"
-                                      method="post"
-                                      style="display:inline">
-                                    <input type="hidden" name="habitId" value="@habit.Id" />
-                                    <input type="hidden" name="CravingLevel" value="8" />
-                                    <input type="hidden" name="TriggerType" value="Other" />
-                                    <button type="submit" class="action-btn btn-relapse"
-                                            title="Зафіксувати зрив">
-                                        ❌ Зрив
-                                    </button>
-                                </form>
-                            }
-
-                            @if (habit.IsOwner)
-                            {
-                                <a asp-controller="Habit" asp-action="Edit"
-                                   asp-route-id="@habit.Id" class="action-btn btn-edit">✏️</a>
-
-                                <form asp-controller="Habit" asp-action="Pause"
-                                      asp-route-id="@habit.Id" method="post" style="display:inline">
-                                    <button type="submit" class="action-btn btn-pause">
-                                        @(habit.IsActive ? "⏸" : "▶️")
-                                    </button>
-                                </form>
-
-                                <form asp-controller="Habit" asp-action="Delete"
-                                      asp-route-id="@habit.Id" method="post" style="display:inline"
-                                      onsubmit="return confirm('Видалити звичку «@habit.Name»?')">
-                                    <button type="submit" class="action-btn btn-delete">🗑️</button>
-                                </form>
-                            }
-
-                            @if (habit.IsShared)
-                            {
-                                <a asp-controller="SharedHabit"
-                                   asp-action="Progress"
-                                   asp-route-habitId="@habit.Id"
-                                   class="action-btn"
-                                   style="background:#dcfce7;color:#15803d">👥</a>
-                            }
-
-                            @if (habit.ReminderTime.HasValue)
-                            {
-                                <a asp-controller="Habit"
-                                   asp-action="AddToGoogleCalendar"
-                                   asp-route-id="@habit.Id"
-                                   class="action-btn"
-                                   target="_blank"
-                                   style="background:#dbeafe;color:#1d4ed8">
-                                    📅
-                                </a>
-                            }
-
-                            <a asp-controller="Analytics" asp-action="Index"
-                               asp-route-habitId="@habit.Id"
-                               class="action-btn"
-                               style="background:#ede9fe;color:#7c3aed">📊</a>
+            @if (quitHabits.Any())
+            {
+                <div class="section-header" style="margin-top: @(regularHabits.Any() ? "32px" : "0")">
+                    <div class="section-title">🚭 Кидаю звичку</div>
+                    <span class="section-badge badge-red">@quitHabits.Count</span>
+                </div>
+                <div class="habits-container">
+                    @foreach (var habit in quitHabits)
+                    {
+                        <div class="habit-card quit-card @(!habit.IsActive ? "paused" : "")">
+                            <div class="habit-color-bar" style="background:@habit.Color"></div>
+                            <div class="habit-main">
+                                <div class="habit-name">@habit.Name</div>
+                                @if (!string.IsNullOrEmpty(habit.Description))
+                                {
+                                    <div class="habit-desc">@habit.Description</div>
+                                }
+                                <div class="habit-tags">
+                                    <span class="tag tag-cat">@habit.Category</span>
+                                    <span class="tag tag-quit">🚭 Відмова</span>
+                                    @if (!habit.IsActive)
+                                    {
+                                        <span class="tag tag-paused">⏸ Пауза</span>
+                                    }
+                                </div>
+                            </div>
+                            <div class="habit-stats">
+                                <div class="habit-stat">
+                                    <span class="habit-stat-val">@(habit.CleanDays > 0 ? $"🟢{habit.CleanDays}" : "—")</span>
+                                    <span class="habit-stat-label">Чисті дні</span>
+                                </div>
+                                <div class="habit-stat">
+                                    <span class="habit-stat-val">💪@habit.DefeatedCravings</span>
+                                    <span class="habit-stat-label">Потяги</span>
+                                </div>
+                                <div class="habit-stat">
+                                    <span class="habit-stat-val">❌@habit.RelapsesCount</span>
+                                    <span class="habit-stat-label">Зриви</span>
+                                </div>
+                            </div>
+                            <div class="habit-actions">
+                                @if (habit.IsActive)
+                                {
+                                    <form asp-controller="QuitHabit" asp-action="LogCleanDay" method="post" style="display:inline">
+                                        <input type="hidden" name="habitId" value="@habit.Id" />
+                                        <button type="submit" class="action-btn btn-clean">✅ Чистий</button>
+                                    </form>
+                                    <form asp-controller="QuitHabit" asp-action="LogCraving" method="post" style="display:inline">
+                                        <input type="hidden" name="habitId" value="@habit.Id" />
+                                        <input type="hidden" name="CravingLevel" value="5" />
+                                        <input type="hidden" name="TriggerType" value="Other" />
+                                        <button type="submit" class="action-btn btn-craving">⚠️ Потяг</button>
+                                    </form>
+                                    <a href="@Url.Action("Crisis", "Quit", new { mode = "afterRelapse", habitId = habit.Id })"
+                                       class="action-btn btn-relapse">❌ Зрив</a>
+                                    <a href="@Url.Action("Crisis", "Quit")" class="action-btn btn-agent">🤖 Агент</a>
+                                }
+                                @if (habit.IsOwner)
+                                {
+                                    <a asp-controller="Habit" asp-action="Edit" asp-route-id="@habit.Id" class="action-btn btn-edit">✏️</a>
+                                    <form asp-controller="Habit" asp-action="Pause" asp-route-id="@habit.Id" method="post" style="display:inline">
+                                        <button type="submit" class="action-btn btn-pause">@(habit.IsActive ? "⏸" : "▶️")</button>
+                                    </form>
+                                    <form asp-controller="Habit" asp-action="Delete" asp-route-id="@habit.Id" method="post" style="display:inline"
+                                          onsubmit="return confirm('Видалити звичку «@habit.Name»?')">
+                                        <button type="submit" class="action-btn btn-delete">🗑️</button>
+                                    </form>
+                                }
+                                <a asp-controller="Quit" asp-action="Index" class="action-btn" style="background:#ede9fe;color:#7c3aed">📊</a>
+                            </div>
                         </div>
-                    </div>
-                }
-            </div>
+                    }
+                </div>
+            }
         }
     </div>
-
-    <script>
-        function filterHabits(status, btn) {
-            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-            btn.classList.add('active');
-
-            document.querySelectorAll('.habit-card').forEach(card => {
-                if (status === 'all') {
-                    card.style.display = 'flex';
-                } else {
-                    card.style.display = card.dataset.status === status ? 'flex' : 'none';
-                }
-            });
-        }
-    </script>
 
 </body>
 </html>

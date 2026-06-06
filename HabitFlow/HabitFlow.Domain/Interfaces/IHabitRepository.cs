@@ -1,5 +1,6 @@
 ﻿using HabitFlow.Domain.Entities;
 
+
 namespace HabitFlow.Domain.Interfaces
 {
     public interface IHabitRepository

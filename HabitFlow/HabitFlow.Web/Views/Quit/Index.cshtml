@@ -1,0 +1,473 @@
+﻿@using HabitFlow.BLL.DTOs
+@model QuitAnalyticsViewModel
+@{
+    ViewData["Title"] = "Аналітика відмови";
+}
+
+<div class="quit-page">
+
+    <div class="quit-header">
+        <h1>📊 Моя відмова</h1>
+        <a href="@Url.Action("Crisis", "Quit")" class="btn-crisis">🆘 Підтримка зараз</a>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card stat-green">
+            <div class="stat-val">@Model.CleanDays</div>
+            <div class="stat-label">Чистих днів</div>
+        </div>
+        <div class="stat-card stat-blue">
+            <div class="stat-val">@Model.WonCravingsCount / @Model.TotalCravingsCount</div>
+            <div class="stat-label">Пережито потягів</div>
+        </div>
+        <div class="stat-card stat-orange">
+            <div class="stat-val">@Model.RelapseCount</div>
+            <div class="stat-label">Зривів</div>
+        </div>
+        <div class="stat-card @(Model.RelapseRisk >= 70 ? "stat-red" : Model.RelapseRisk >= 40 ? "stat-orange" : "stat-green")">
+            <div class="stat-val">@Model.RelapseRisk%</div>
+            <div class="stat-label">Ризик зриву</div>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(Model.MainInsight))
+    {
+        <div class="insight-block">
+            <div class="insight-icon">💡</div>
+            <div>
+                <div class="insight-text">@Model.MainInsight</div>
+                @if (!string.IsNullOrWhiteSpace(Model.ActionTip))
+                {
+                    <div class="insight-tip">→ @Model.ActionTip</div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="section-row">
+        <div class="section-card">
+            <div class="section-title">⏰ Найнебезпечніший час</div>
+            <div class="big-val">@Model.MostDangerousTime</div>
+        </div>
+        <div class="section-card">
+            <div class="section-title">📈 Середній рівень потягу</div>
+            <div class="big-val">@Model.AverageCravingIntensity / 10</div>
+        </div>
+    </div>
+
+    @if (Model.MostDangerousTriggers.Any())
+    {
+        <div class="triggers-card">
+            <div class="section-title">🎯 Найнебезпечніші тригери</div>
+            <div class="triggers-list">
+                @foreach (var t in Model.MostDangerousTriggers)
+                {
+                    <div class="trigger-row">
+                        <div class="trigger-name">@t.TriggerName</div>
+                        <div class="trigger-stats">
+                            <span class="tag-count">@t.Count разів</span>
+                            <span class="tag-risk @(t.RiskPercent >= 60 ? "high" : t.RiskPercent >= 30 ? "mid" : "low")">
+                                @t.RiskPercent% зривів
+                            </span>
+                            <span class="tag-intensity">⚡@t.AverageIntensity/10</span>
+                        </div>
+                        <div class="trigger-bar-wrap">
+                            <div class="trigger-bar" style="width:@t.RiskPercent%"></div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+
+    <div class="coach-cta">
+        <a href="@Url.Action("Crisis", "Quit")?mode=afterRelapse" class="btn-coach-relapse">💔 Стався зрив — отримати підтримку</a>
+        <a href="@Url.Action("Crisis", "Quit")" class="btn-coach-craving">🔥 Зараз потяг</a>
+        <a href="@Url.Action("Crisis", "Quit")?mode=prevention" class="btn-coach-prevention">🛡️ Профілактика</a>
+    </div>
+
+    <div class="log-trigger-section">
+        <div class="section-title">📝 Записати потяг або зрив</div>
+        <form asp-controller="Quit" asp-action="LogTrigger" method="post" class="log-form">
+            @Html.AntiForgeryToken()
+            <div class="form-row">
+                <label>Сила потягу: <strong id="lvl-label">5</strong>/10</label>
+                <input type="range" name="intensity" min="1" max="10" value="5"
+                       oninput="document.getElementById('lvl-label').textContent=this.value" />
+            </div>
+            <div class="form-row">
+                <label>Тригер:</label>
+                <select name="triggerType">
+                    <option value="Stress">Стрес</option>
+                    <option value="Boredom">Нудьга</option>
+                    <option value="SocialPressure">Соціальний тиск</option>
+                    <option value="Alcohol">Алкоголь</option>
+                    <option value="AfterMeal">Після їжі</option>
+                    <option value="Morning">Ранок</option>
+                    <option value="EmotionalPain">Емоційний біль</option>
+                    <option value="Habit">Автоматична звичка</option>
+                    <option value="Other">Інше</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label>Локація (необов'язково):</label>
+                <input type="text" name="location" placeholder="вдома, на роботі..." />
+            </div>
+            <div class="form-row">
+                <label>Нотатка (необов'язково):</label>
+                <input type="text" name="note" placeholder="що відчував(ла)..." />
+            </div>
+            <div class="form-row form-row-check">
+                <label>
+                    <input type="checkbox" name="didRelapse" value="true" id="relapseCheck"
+                           onchange="toggleRelapseBtn(this.checked)" />
+                    Стався зрив
+                </label>
+            </div>
+            <div class="form-btns">
+                <button type="submit" id="submitLogBtn" class="btn-log-craving">⚡ Записати потяг</button>
+            </div>
+        </form>
+    </div>
+
+</div>
+
+<style>
+    .quit-page {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 24px 16px;
+    }
+
+    .quit-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 24px;
+    }
+
+        .quit-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+    .btn-crisis {
+        background: #e53e3e;
+        color: #fff;
+        padding: 10px 20px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+        .btn-crisis:hover {
+            background: #c53030;
+        }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px;
+        text-align: center;
+        border: 1.5px solid #e2e8f0;
+    }
+
+    .stat-val {
+        font-size: 1.8rem;
+        font-weight: 700;
+    }
+
+    .stat-label {
+        font-size: 0.78rem;
+        color: #718096;
+        margin-top: 4px;
+    }
+
+    .stat-green .stat-val {
+        color: #16a34a;
+    }
+
+    .stat-blue .stat-val {
+        color: #2563eb;
+    }
+
+    .stat-orange .stat-val {
+        color: #d97706;
+    }
+
+    .stat-red .stat-val {
+        color: #dc2626;
+    }
+
+    .insight-block {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        border-radius: 12px;
+        padding: 16px;
+        display: flex;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .insight-icon {
+        font-size: 1.4rem;
+    }
+
+    .insight-text {
+        font-size: 0.94rem;
+        color: #1a202c;
+        font-weight: 500;
+    }
+
+    .insight-tip {
+        font-size: 0.88rem;
+        color: #4a5568;
+        margin-top: 6px;
+    }
+
+    .section-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .section-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px;
+        border: 1.5px solid #e2e8f0;
+    }
+
+    .section-title {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #4a5568;
+        margin-bottom: 8px;
+    }
+
+    .big-val {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #1a202c;
+    }
+
+    .triggers-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px;
+        border: 1.5px solid #e2e8f0;
+        margin-bottom: 20px;
+    }
+
+    .triggers-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 8px;
+    }
+
+    .trigger-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .trigger-name {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: #1a202c;
+    }
+
+    .trigger-stats {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .tag-count {
+        font-size: 0.78rem;
+        background: #edf2f7;
+        color: #4a5568;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+    .tag-risk {
+        font-size: 0.78rem;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+        .tag-risk.high {
+            background: #fee2e2;
+            color: #c53030;
+        }
+
+        .tag-risk.mid {
+            background: #fef3c7;
+            color: #d97706;
+        }
+
+        .tag-risk.low {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+    .tag-intensity {
+        font-size: 0.78rem;
+        background: #ede9fe;
+        color: #6d28d9;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+    .trigger-bar-wrap {
+        background: #f7fafc;
+        border-radius: 4px;
+        height: 4px;
+        overflow: hidden;
+    }
+
+    .trigger-bar {
+        background: #e53e3e;
+        height: 4px;
+        border-radius: 4px;
+        transition: width 0.3s;
+    }
+
+    .coach-cta {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 24px;
+        flex-wrap: wrap;
+    }
+
+    .btn-coach-relapse {
+        background: #fee2e2;
+        color: #c53030;
+        padding: 10px 16px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.88rem;
+    }
+
+    .btn-coach-craving {
+        background: #fef3c7;
+        color: #d97706;
+        padding: 10px 16px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.88rem;
+    }
+
+    .btn-coach-prevention {
+        background: #e0f2fe;
+        color: #0369a1;
+        padding: 10px 16px;
+        border-radius: 10px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.88rem;
+    }
+
+    .log-trigger-section {
+        background: #fff;
+        border-radius: 14px;
+        padding: 20px;
+        border: 1.5px solid #e2e8f0;
+    }
+
+    .log-form {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    .form-row label {
+        font-size: 0.88rem;
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    .form-row input[type="range"] {
+        width: 100%;
+    }
+
+    .form-row input[type="text"], .form-row select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #cbd5e0;
+        border-radius: 8px;
+        font-size: 0.92rem;
+    }
+
+    .form-row-check label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+    }
+
+    .form-btns {
+        display: flex;
+        gap: 10px;
+    }
+
+    .btn-log-craving {
+        background: #fef3c7;
+        color: #d97706;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    .btn-log-relapse {
+        background: #fee2e2;
+        color: #dc2626;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.9rem;
+    }
+
+    @@media (max-width: 640px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .section-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+
+<script>
+    function toggleRelapseBtn(isRelapse) {
+        const btn = document.getElementById('submitLogBtn');
+        if (isRelapse) {
+            btn.textContent = '❌ Записати зрив';
+            btn.className = 'btn-log-relapse';
+        } else {
+            btn.textContent = '⚡ Записати потяг';
+            btn.className = 'btn-log-craving';
+        }
+    }
+</script>

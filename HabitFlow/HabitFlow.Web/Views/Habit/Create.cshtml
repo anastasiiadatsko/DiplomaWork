@@ -36,351 +36,355 @@
     <title>HabitFlow — Нова звичка</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f0fdf4;
-            min-height: 100vh;
-        }
+            body {
+                font-family: 'Inter', sans-serif;
+                background: #f0fdf4;
+                min-height: 100vh;
+            }
 
-        .navbar {
-            background: white;
-            padding: 14px 32px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 1px 8px rgba(0,0,0,0.06);
-        }
+            .navbar {
+                background: white;
+                padding: 14px 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+            }
 
-        .logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: #16a34a;
-            text-decoration: none;
-        }
+            .logo {
+                font-size: 20px;
+                font-weight: 700;
+                color: #16a34a;
+                text-decoration: none;
+            }
 
-        .back-link {
-            font-size: 14px;
-            color: #6b7280;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+            .back-link {
+                font-size: 14px;
+                color: #6b7280;
+                text-decoration: none;
+            }
 
-            .back-link:hover {
+                .back-link:hover {
+                    color: #374151;
+                }
+
+            .container {
+                max-width: 680px;
+                margin: 32px auto;
+                padding: 0 24px 48px;
+            }
+
+            .page-title {
+                font-size: 24px;
+                font-weight: 700;
+                color: #111827;
+                margin-bottom: 24px;
+            }
+
+            .card {
+                background: white;
+                border-radius: 20px;
+                padding: 28px;
+                box-shadow: 0 2px 16px rgba(0,0,0,0.06);
+            }
+
+            .form-group {
+                margin-bottom: 22px;
+            }
+
+            .form-label {
+                display: block;
+                font-size: 13px;
+                font-weight: 600;
+                color: #374151;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                margin-bottom: 8px;
+            }
+
+            .form-input {
+                width: 100%;
+                padding: 11px 14px;
+                border: 1.5px solid #e5e7eb;
+                border-radius: 10px;
+                font-family: 'Inter', sans-serif;
+                font-size: 15px;
+                color: #111827;
+                background: #f9fafb;
+                outline: none;
+                transition: border-color 0.2s;
+            }
+
+                .form-input:focus {
+                    border-color: #16a34a;
+                    background: white;
+                }
+
+            textarea.form-input {
+                resize: vertical;
+                min-height: 80px;
+            }
+
+            .error-msg {
+                font-size: 12px;
+                color: #dc2626;
+                margin-top: 4px;
+                display: block;
+            }
+
+            .category-grid {
+                display: grid;
+                grid-template-columns: repeat(4, 1fr);
+                gap: 8px;
+            }
+
+            .cat-option {
+                padding: 12px 8px;
+                border: 2px solid #e5e7eb;
+                border-radius: 12px;
+                background: white;
+                cursor: pointer;
+                text-align: center;
+                transition: all 0.15s;
+                font-family: 'Inter', sans-serif;
+            }
+
+                .cat-option:hover {
+                    border-color: #86efac;
+                }
+
+                .cat-option.selected {
+                    border-color: #16a34a;
+                    background: #f0fdf4;
+                }
+
+            .cat-icon {
+                font-size: 22px;
+                display: block;
+                margin-bottom: 4px;
+            }
+
+            .cat-name {
+                font-size: 11px;
+                font-weight: 600;
                 color: #374151;
             }
 
-        .container {
-            max-width: 680px;
-            margin: 32px auto;
-            padding: 0 24px 48px;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #111827;
-            margin-bottom: 24px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 20px;
-            padding: 28px;
-            box-shadow: 0 2px 16px rgba(0,0,0,0.06);
-        }
-
-        .form-group {
-            margin-bottom: 22px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 8px;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 11px 14px;
-            border: 1.5px solid #e5e7eb;
-            border-radius: 10px;
-            font-family: 'Inter', sans-serif;
-            font-size: 15px;
-            color: #111827;
-            background: #f9fafb;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-
-            .form-input:focus {
-                border-color: #16a34a;
-                background: white;
-            }
-
-        textarea.form-input {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .error-msg {
-            font-size: 12px;
-            color: #dc2626;
-            margin-top: 4px;
-            display: block;
-        }
-
-        /* CATEGORY GRID */
-        .category-grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-        }
-
-        .cat-option {
-            padding: 12px 8px;
-            border: 2px solid #e5e7eb;
-            border-radius: 12px;
-            background: white;
-            cursor: pointer;
-            text-align: center;
-            transition: all 0.15s;
-            font-family: 'Inter', sans-serif;
-        }
-
-            .cat-option:hover {
-                border-color: #86efac;
-            }
-
-            .cat-option.selected {
-                border-color: #16a34a;
-                background: #f0fdf4;
-            }
-
-        .cat-icon {
-            font-size: 22px;
-            display: block;
-            margin-bottom: 4px;
-        }
-
-        .cat-name {
-            font-size: 11px;
-            font-weight: 600;
-            color: #374151;
-        }
-
-        .cat-option.selected .cat-name {
-            color: #16a34a;
-        }
-
-        /* FREQUENCY */
-        .freq-options {
-            display: flex;
-            gap: 8px;
-        }
-
-        .freq-option {
-            flex: 1;
-            padding: 10px;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            background: white;
-            cursor: pointer;
-            text-align: center;
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
-            transition: all 0.15s;
-            font-family: 'Inter', sans-serif;
-        }
-
-            .freq-option:hover {
-                border-color: #86efac;
-            }
-
-            .freq-option.selected {
-                border-color: #16a34a;
-                background: #f0fdf4;
+            .cat-option.selected .cat-name {
                 color: #16a34a;
             }
 
-        /* DAYS */
-        .days-grid {
-            display: flex;
-            gap: 8px;
-        }
-
-        .day-chip {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            border: 2px solid #e5e7eb;
-            background: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: 600;
-            color: #374151;
-            transition: all 0.15s;
-            font-family: 'Inter', sans-serif;
-        }
-
-            .day-chip:hover {
-                border-color: #86efac;
+            .freq-options {
+                display: flex;
+                gap: 8px;
             }
 
-            .day-chip.selected {
-                border-color: #16a34a;
+            .freq-option {
+                flex: 1;
+                padding: 10px;
+                border: 2px solid #e5e7eb;
+                border-radius: 10px;
+                background: white;
+                cursor: pointer;
+                text-align: center;
+                font-size: 13px;
+                font-weight: 600;
+                color: #374151;
+                transition: all 0.15s;
+                font-family: 'Inter', sans-serif;
+            }
+
+                .freq-option:hover {
+                    border-color: #86efac;
+                }
+
+                .freq-option.selected {
+                    border-color: #16a34a;
+                    background: #f0fdf4;
+                    color: #16a34a;
+                }
+
+            .days-grid {
+                display: flex;
+                gap: 8px;
+            }
+
+            .day-chip {
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                border: 2px solid #e5e7eb;
+                background: white;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: 600;
+                color: #374151;
+                transition: all 0.15s;
+                font-family: 'Inter', sans-serif;
+            }
+
+                .day-chip:hover {
+                    border-color: #86efac;
+                }
+
+                .day-chip.selected {
+                    border-color: #16a34a;
+                    background: #16a34a;
+                    color: white;
+                }
+
+            .color-grid {
+                display: flex;
+                gap: 10px;
+                flex-wrap: wrap;
+            }
+
+            .color-dot {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                cursor: pointer;
+                transition: transform 0.15s;
+                border: 3px solid transparent;
+            }
+
+                .color-dot:hover {
+                    transform: scale(1.15);
+                }
+
+                .color-dot.selected {
+                    border-color: #374151;
+                }
+
+            .preview-card {
+                background: #f9fafb;
+                border: 1.5px solid #e5e7eb;
+                border-radius: 14px;
+                padding: 16px 20px;
+                display: flex;
+                align-items: center;
+                gap: 14px;
+                margin-top: 24px;
+            }
+
+            .preview-bar {
+                width: 4px;
+                height: 44px;
+                border-radius: 2px;
+            }
+
+            .preview-name {
+                font-size: 16px;
+                font-weight: 600;
+                color: #111827;
+            }
+
+            .preview-meta {
+                font-size: 13px;
+                color: #9ca3af;
+            }
+
+            .form-actions {
+                display: flex;
+                gap: 12px;
+                margin-top: 24px;
+                padding-top: 24px;
+                border-top: 1px solid #f3f4f6;
+            }
+
+            .btn-submit {
+                flex: 1;
+                padding: 12px;
                 background: #16a34a;
                 color: white;
+                border: none;
+                border-radius: 12px;
+                font-family: 'Inter', sans-serif;
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
             }
 
-        /* COLORS */
-        .color-grid {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
+                .btn-submit:hover {
+                    background: #15803d;
+                }
 
-        .color-dot {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            cursor: pointer;
-            transition: transform 0.15s;
-            border: 3px solid transparent;
-        }
-
-            .color-dot:hover {
-                transform: scale(1.15);
+            .btn-cancel {
+                padding: 12px 24px;
+                background: #f3f4f6;
+                color: #374151;
+                border: none;
+                border-radius: 12px;
+                font-family: 'Inter', sans-serif;
+                font-size: 15px;
+                font-weight: 600;
+                cursor: pointer;
+                text-decoration: none;
+                display: flex;
+                align-items: center;
             }
 
-            .color-dot.selected {
-                border-color: #374151;
+                .btn-cancel:hover {
+                    background: #e5e7eb;
+                }
+
+            .divider {
+                border: none;
+                border-top: 1px solid #f3f4f6;
+                margin: 22px 0;
             }
 
-        /* PREVIEW */
-        .preview-card {
-            background: #f9fafb;
-            border: 1.5px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 16px 20px;
-            display: flex;
-            align-items: center;
-            gap: 14px;
-            margin-top: 24px;
-        }
-
-        .preview-bar {
-            width: 4px;
-            height: 44px;
-            border-radius: 2px;
-        }
-
-        .preview-name {
-            font-size: 16px;
-            font-weight: 600;
-            color: #111827;
-        }
-
-        .preview-meta {
-            font-size: 13px;
-            color: #9ca3af;
-        }
-
-        /* BUTTONS */
-        .form-actions {
-            display: flex;
-            gap: 12px;
-            margin-top: 24px;
-            padding-top: 24px;
-            border-top: 1px solid #f3f4f6;
-        }
-
-        .btn-submit {
-            flex: 1;
-            padding: 12px;
-            background: #16a34a;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-family: 'Inter', sans-serif;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-        }
-
-            .btn-submit:hover {
-                background: #15803d;
+            .friend-block {
+                background: #eff6ff;
+                border: 1.5px solid #bfdbfe;
+                border-radius: 12px;
+                padding: 16px;
+                margin-bottom: 22px;
             }
 
-        .btn-cancel {
-            padding: 12px 24px;
-            background: #f3f4f6;
-            color: #374151;
-            border: none;
-            border-radius: 12px;
-            font-family: 'Inter', sans-serif;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-        }
+                .friend-block .form-label {
+                    color: #1d4ed8;
+                }
 
-            .btn-cancel:hover {
-                background: #e5e7eb;
-            }
+                .friend-block .form-input {
+                    border-color: #bfdbfe;
+                    background: white;
+                }
 
-        .divider {
-            border: none;
-            border-top: 1px solid #f3f4f6;
-            margin: 22px 0;
-        }
+                    .friend-block .form-input:focus {
+                        border-color: #2563eb;
+                    }
     </style>
 </head>
 <body>
-
     <nav class="navbar">
         <a asp-controller="Dashboard" asp-action="Index" class="logo">HabitFlow</a>
         <a asp-controller="Habit" asp-action="Index" class="back-link">Назад до звичок</a>
     </nav>
-
     <div class="container">
         <div class="page-title">✨ Нова звичка</div>
-
         <div class="card">
             <form asp-controller="Habit" asp-action="Create" method="post" id="habitForm">
-                <!-- HIDDEN INPUTS -->
                 <input type="hidden" name="Category" id="categoryInput" value="@Model.Category" />
                 <input type="hidden" name="FrequencyType" id="freqInput" value="0" />
                 <input type="hidden" name="Color" id="colorInput" value="#16a34a" />
 
-                <!-- NAME -->
                 <div class="form-group">
                     <label class="form-label">Назва звички *</label>
-                    <input class="form-input" type="text" name="Name"
-                           value="@Model.Name"
-                           placeholder="Наприклад: Ранкова медитація"
-                           id="nameInput" oninput="updatePreview()" />
+                    <input class="form-input" type="text" name="Name" value="@Model.Name"
+                           placeholder="Наприклад: Ранкова медитація" id="nameInput" oninput="updatePreview()" />
                     <span asp-validation-for="Name" class="error-msg"></span>
                 </div>
 
-                <!-- DESCRIPTION -->
                 <div class="form-group">
                     <label class="form-label">Опис (необов'язково)</label>
                     <textarea class="form-input" name="Description"
@@ -389,14 +393,15 @@
 
                 <hr class="divider" />
 
-                <!-- CATEGORY -->
                 <div class="form-group">
                     <label class="form-label">Категорія *</label>
                     <div class="category-grid">
                         @foreach (var (icon, name) in categories)
                         {
-                            <button type="button" class="cat-option @(Model.Category == name ? "selected" : "")"
-                                    onclick="selectCategory(this, '@name')">
+                            <button type="button"
+                                    class="cat-option @(Model.Category == name ? "selected" : "")"
+                                    data-category="@name"
+                                    onclick="selectCategory(this)">
                                 <span class="cat-icon">@icon</span>
                                 <span class="cat-name">@name</span>
                             </button>
@@ -404,7 +409,6 @@
                     </div>
                 </div>
 
-                <!-- HABIT MODE -->
                 <div class="form-group">
                     <label class="form-label">Тип звички</label>
                     <select asp-for="Mode" class="form-input" id="habitMode">
@@ -414,7 +418,6 @@
                     <span asp-validation-for="Mode" class="error-msg"></span>
                 </div>
 
-                <!-- QUIT CATEGORY -->
                 <div class="form-group" id="quitCategoryBlock" style="display:none;">
                     <label class="form-label">Категорія звички відмови</label>
                     <select asp-for="QuitCategory" class="form-input">
@@ -430,33 +433,23 @@
 
                 <hr class="divider" />
 
-                <!-- FREQUENCY -->
                 <div class="form-group">
                     <label class="form-label">Частота</label>
                     <div class="freq-options">
-                        <button type="button" class="freq-option selected"
-                                onclick="selectFreq(this, 0)">
-                            📅 Щодня
-                        </button>
-                        <button type="button" class="freq-option"
-                                onclick="selectFreq(this, 2)">
-                            📆 Конкретні дні
-                        </button>
-                        <button type="button" class="freq-option"
-                                onclick="selectFreq(this, 1)">
-                            🗓 Щотижня
-                        </button>
+                        <button type="button" class="freq-option selected" onclick="selectFreq(this, 0)">📅 Щодня</button>
+                        <button type="button" class="freq-option" onclick="selectFreq(this, 2)">📆 Конкретні дні</button>
+                        <button type="button" class="freq-option" onclick="selectFreq(this, 1)">🗓 Щотижня</button>
                     </div>
                 </div>
 
-                <!-- DAYS (shown when SpecificDays selected) -->
                 <div class="form-group" id="daysGroup" style="display:none">
                     <label class="form-label">Дні тижня</label>
                     <div class="days-grid">
                         @foreach (var (value, label) in days)
                         {
                             <button type="button" class="day-chip"
-                                    onclick="toggleDay(this, '@value')">
+                                    data-value="@value"
+                                    onclick="toggleDay(this)">
                                 @label
                             </button>
                         }
@@ -465,7 +458,6 @@
 
                 <hr class="divider" />
 
-                <!-- COLOR -->
                 <div class="form-group">
                     <label class="form-label">Колір</label>
                     <div class="color-grid">
@@ -473,37 +465,39 @@
                         {
                             <div class="color-dot @(color == "#16a34a" ? "selected" : "")"
                                  style="background:@color"
-                                 onclick="selectColor(this, '@color')">
-                            </div>
+                                 data-color="@color"
+                                 onclick="selectColor(this)"></div>
                         }
                     </div>
                 </div>
 
                 <hr class="divider" />
 
-                <!-- GOOGLE CALENDAR REMINDER -->
                 <div class="form-group">
-                    <label class="form-label" asp-for="ReminderTime">Час нагадування</label>
-                    <input asp-for="ReminderTime"
-                           type="text"
-                           class="form-input"
+                    <label class="form-label">Час нагадування</label>
+                    <input asp-for="ReminderTime" type="text" class="form-input"
                            placeholder="Наприклад: 14:30"
-                           pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$"
-                           title="Введіть час у 24-годинному форматі, наприклад 09:30 або 18:45" />
+                           pattern="^([01][0-9]|2[0-3]):[0-5][0-9]$" />
                     <span asp-validation-for="ReminderTime" class="error-msg"></span>
                 </div>
 
                 <div class="form-group">
-                    <label style="display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:0; font-size:14px;">
-                        <input asp-for="AddToGoogleCalendar"
-                               type="checkbox"
-                               style="width:auto;" />
+                    <label style="display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:0; font-size:14px; cursor:pointer;">
+                        <input asp-for="AddToGoogleCalendar" type="checkbox" style="width:auto;" />
                         Додати нагадування в Google Calendar
                     </label>
                 </div>
 
-                <!-- PREVIEW -->
-                <div class="preview-card" id="preview">
+                <hr class="divider" />
+
+                <div class="friend-block">
+                    <label class="form-label">👥 Спільна звичка (необов'язково)</label>
+                    <input asp-for="FriendEmail" type="email" class="form-input"
+                           placeholder="Email друга, наприклад friend@email.com" />
+                    <span asp-validation-for="FriendEmail" class="error-msg"></span>
+                </div>
+
+                <div class="preview-card">
                     <div class="preview-bar" id="previewBar" style="background:#16a34a"></div>
                     <div>
                         <div class="preview-name" id="previewName">Назва звички</div>
@@ -513,87 +507,65 @@
 
                 <div class="form-actions">
                     <a asp-controller="Habit" asp-action="Index" class="btn-cancel">Скасувати</a>
-                    <div class="form-group">
-                        <label asp-for="FriendEmail">Електронна пошта друга для спільної звички</label>
-                        <input asp-for="FriendEmail"
-                               type="email"
-                               placeholder="friend@email.com" />
-                        <span asp-validation-for="FriendEmail" class="error-message"></span>
-                    </div>
                     <button type="submit" class="btn-submit">✓ Створити звичку</button>
                 </div>
             </form>
         </div>
     </div>
-
     <script>
-        let selectedDays = [];
-
-        function selectCategory(btn, value) {
-            document.querySelectorAll('.cat-option').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            document.getElementById('categoryInput').value = value;
-            updatePreview();
-        }
-
-        function selectFreq(btn, value) {
-            document.querySelectorAll('.freq-option').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            document.getElementById('freqInput').value = value;
-            document.getElementById('daysGroup').style.display = value == 2 ? 'block' : 'none';
-            updatePreview();
-        }
-
-        function toggleDay(btn, value) {
-            if (btn.classList.contains('selected')) {
-                btn.classList.remove('selected');
-                selectedDays = selectedDays.filter(d => d !== value);
-                document.querySelectorAll(`input[name="targetDays"][value="${value}"]`)
-                    .forEach(i => i.remove());
-            } else {
+            function selectCategory(btn) {
+                document.querySelectorAll('.cat-option').forEach(b => b.classList.remove('selected'));
                 btn.classList.add('selected');
-                selectedDays.push(value);
-                const input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'targetDays';
-                input.value = value;
-                document.getElementById('habitForm').appendChild(input);
+                document.getElementById('categoryInput').value = btn.dataset.category;
+                updatePreview();
             }
-        }
 
-        function selectColor(dot, value) {
-            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
-            dot.classList.add('selected');
-            document.getElementById('colorInput').value = value;
-            document.getElementById('previewBar').style.background = value;
-            updatePreview();
-        }
+            function selectFreq(btn, value) {
+                document.querySelectorAll('.freq-option').forEach(b => b.classList.remove('selected'));
+                btn.classList.add('selected');
+                document.getElementById('freqInput').value = value;
+                document.getElementById('daysGroup').style.display = value == 2 ? 'block' : 'none';
+                updatePreview();
+            }
 
-        function updatePreview() {
-            const name = document.getElementById('nameInput').value || 'Назва звички';
-            const freqVal = document.getElementById('freqInput').value;
-            const freqText = freqVal == '0' ? 'Щодня' : freqVal == '1' ? 'Щотижня' : 'Конкретні дні';
-            document.getElementById('previewName').textContent = name;
-            document.getElementById('previewMeta').textContent = freqText;
-        }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const habitMode = document.getElementById('habitMode');
-            const quitCategoryBlock = document.getElementById('quitCategoryBlock');
-
-            function toggleQuitCategory() {
-                if (habitMode.value === 'Quit') {
-                    quitCategoryBlock.style.display = 'block';
+            function toggleDay(btn) {
+                const value = btn.dataset.value;
+                if (btn.classList.contains('selected')) {
+                    btn.classList.remove('selected');
+                    document.querySelectorAll(`input[name="targetDays"][value="${value}"]`).forEach(i => i.remove());
                 } else {
-                    quitCategoryBlock.style.display = 'none';
+                    btn.classList.add('selected');
+                    const input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'targetDays';
+                    input.value = value;
+                    document.getElementById('habitForm').appendChild(input);
                 }
             }
 
-            habitMode.addEventListener('change', toggleQuitCategory);
-            toggleQuitCategory();
-        });
+            function selectColor(dot) {
+                document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('selected'));
+                dot.classList.add('selected');
+                document.getElementById('colorInput').value = dot.dataset.color;
+                document.getElementById('previewBar').style.background = dot.dataset.color;
+                updatePreview();
+            }
 
+            function updatePreview() {
+                const name = document.getElementById('nameInput').value || 'Назва звички';
+                const freqVal = document.getElementById('freqInput').value;
+                const freqText = freqVal == '0' ? 'Щодня' : freqVal == '1' ? 'Щотижня' : 'Конкретні дні';
+                document.getElementById('previewName').textContent = name;
+                document.getElementById('previewMeta').textContent = freqText;
+            }
+
+            document.addEventListener('DOMContentLoaded', function () {
+                const habitMode = document.getElementById('habitMode');
+                const quitBlock = document.getElementById('quitCategoryBlock');
+                function toggleQuit() { quitBlock.style.display = habitMode.value === 'Quit' ? 'block' : 'none'; }
+                habitMode.addEventListener('change', toggleQuit);
+                toggleQuit();
+            });
     </script>
-
 </body>
 </html>

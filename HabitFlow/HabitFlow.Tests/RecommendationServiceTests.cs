@@ -41,7 +41,8 @@ namespace HabitFlow.Tests
             var service = CreateService(
                 user,
                 habits: new List<Habit>(),
-                logs: new List<HabitLog>());
+                logs: new List<HabitLog>(),
+                triggerLogs: new List<TriggerLog>());
 
             var result = await service.GetRecommendationsAsync(userId);
 
@@ -82,7 +83,8 @@ namespace HabitFlow.Tests
             var service = CreateService(
                 user,
                 habits: new List<Habit> { habit },
-                logs: logs);
+                logs: logs,
+                triggerLogs: new List<TriggerLog>());
 
             var result = await service.GetRecommendationsAsync(userId);
 
@@ -125,7 +127,8 @@ namespace HabitFlow.Tests
             var service = CreateService(
                 user,
                 habits: new List<Habit> { habit },
-                logs: logs);
+                logs: logs,
+                triggerLogs: new List<TriggerLog>());
 
             var result = await service.GetRecommendationsAsync(userId);
 
@@ -164,7 +167,8 @@ namespace HabitFlow.Tests
             var service = CreateService(
                 user,
                 habits: new List<Habit> { habit },
-                logs: logs);
+                logs: logs,
+                triggerLogs: new List<TriggerLog>());
 
             var result = await service.GetRecommendationsAsync(userId);
 
@@ -202,7 +206,7 @@ namespace HabitFlow.Tests
                 })
                 .ToList();
 
-            var service = CreateService(user, habits, logs);
+            var service = CreateService(user, habits, logs, triggerLogs: new List<TriggerLog>());
 
             var result = await service.GetRecommendationsAsync(userId);
 
@@ -213,12 +217,14 @@ namespace HabitFlow.Tests
         private static RecommendationService CreateService(
             User user,
             List<Habit> habits,
-            List<HabitLog> logs)
+            List<HabitLog> logs,
+            List<TriggerLog> triggerLogs)
         {
             return new RecommendationService(
                 new FakeHabitRepository(habits),
                 new FakeHabitLogRepository(logs),
-                new FakeUserRepository(user));
+                new FakeUserRepository(user),
+                new FakeTriggerLogRepository(triggerLogs));
         }
 
         private static User CreateUser(Guid userId)
@@ -378,6 +384,57 @@ namespace HabitFlow.Tests
             public Task DeleteAsync(User user)
             {
                 return Task.CompletedTask;
+            }
+        }
+
+        private sealed class FakeTriggerLogRepository : ITriggerLogRepository
+        {
+            private readonly List<TriggerLog> triggerLogs;
+
+            public FakeTriggerLogRepository(List<TriggerLog> triggerLogs)
+            {
+                this.triggerLogs = triggerLogs;
+            }
+
+            public Task AddAsync(TriggerLog log)
+            {
+                this.triggerLogs.Add(log);
+                return Task.CompletedTask;
+            }
+
+            public Task UpdateAsync(TriggerLog log)
+            {
+                return Task.CompletedTask;
+            }
+
+            public Task DeleteAsync(Guid id)
+            {
+                this.triggerLogs.RemoveAll(t => t.Id == id);
+                return Task.CompletedTask;
+            }
+
+            public Task<TriggerLog?> GetByIdAsync(Guid id)
+            {
+                return Task.FromResult(this.triggerLogs.FirstOrDefault(t => t.Id == id));
+            }
+
+            public Task<List<TriggerLog>> GetByUserIdAsync(Guid userId)
+            {
+                return Task.FromResult(this.triggerLogs.Where(t => t.UserId == userId).ToList());
+            }
+
+            public Task<List<TriggerLog>> GetByUserIdForPeriodAsync(Guid userId, DateTime from, DateTime to)
+            {
+                return Task.FromResult(this.triggerLogs
+                    .Where(t => t.UserId == userId && t.OccurredAt >= from && t.OccurredAt <= to)
+                    .ToList());
+            }
+
+            public Task<List<TriggerLog>> GetByHabitAndUserAsync(Guid habitId, Guid userId)
+            {
+                return Task.FromResult(this.triggerLogs
+                    .Where(t => t.HabitId == habitId && t.UserId == userId)
+                    .ToList());
             }
         }
     }

@@ -176,7 +176,7 @@ namespace HabitFlow.BLL.Services
         }
 
         private (string, string, List<CoachQuestion>) FreeChatQ(CoachContext c) => (
-            $"Коуч: «{c.HabitName}»", "🤖",
+            $"Агент: «{c.HabitName}»", "🤖",
             new List<CoachQuestion>
             {
                 new() { Id = "question", Text = "Що хочеш обговорити?",
@@ -252,6 +252,10 @@ namespace HabitFlow.BLL.Services
                 return this.FallbackSummary(ctx, request);
 
             return this.ParseSummaryResponse(text);
+        }
+        public async Task<AnalyticsViewModel> GetHabitAnalyticsForVoiceAsync(Guid habitId, Guid userId)
+        {
+            return await this.analyticsService.GetHabitAnalyticsAsync(habitId, userId);
         }
 
         // ═══════════════════════════════════════════════════════════
