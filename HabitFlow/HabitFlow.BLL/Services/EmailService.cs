@@ -1,7 +1,9 @@
-﻿using HabitFlow.BLL.Interfaces;
+﻿using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
+using HabitFlow.BLL.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
-using Resend;
 
 namespace HabitFlow.BLL.Services
 {
@@ -9,16 +11,16 @@ namespace HabitFlow.BLL.Services
     {
         private readonly IConfiguration configuration;
         private readonly ILogger<EmailService> logger;
-        private readonly IResend resend;
+        private readonly IHttpClientFactory httpClientFactory;
 
         public EmailService(
             IConfiguration configuration,
             ILogger<EmailService> logger,
-            IResend resend)
+            IHttpClientFactory httpClientFactory)
         {
             this.configuration = configuration;
             this.logger = logger;
-            this.resend = resend;
+            this.httpClientFactory = httpClientFactory;
         }
 
         public async Task SendConfirmationEmailAsync(
@@ -64,18 +66,59 @@ namespace HabitFlow.BLL.Services
 
         private async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            var from = this.configuration["Resend:From"]!;
-            var displayName = this.configuration["Resend:DisplayName"] ?? "HabitFlow";
+            var apiKey = this.configuration["Brevo:ApiKey"]!;
+            var fromEmail = this.configuration["Brevo:FromEmail"]!;
+            var fromName = this.configuration["Brevo:FromName"] ?? "HabitFlow";
 
-            var message = new EmailMessage
+            var payload = new
             {
-                From = $"{displayName} <{from}>",
-                To = new[] { toEmail },
-                Subject = subject,
-                HtmlBody = body,
+                sender = new
+                {
+                    name = fromName,
+                    email = fromEmail,
+                },
+                to = new[]
+                {
+            new
+            {
+                email = toEmail,
+            },
+        },
+                subject,
+                htmlContent = body,
             };
 
-            await this.resend.EmailSendAsync(message);
+            var json = JsonSerializer.Serialize(payload);
+
+            using var request = new HttpRequestMessage(
+                HttpMethod.Post,
+                "https://api.brevo.com/v3/smtp/email");
+
+            request.Headers.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/json"));
+
+            request.Headers.Add("api-key", apiKey);
+
+            request.Content = new StringContent(
+                json,
+                Encoding.UTF8,
+                "application/json");
+
+            var client = this.httpClientFactory.CreateClient();
+            var response = await client.SendAsync(request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorBody = await response.Content.ReadAsStringAsync();
+
+                this.logger.LogError(
+                    "Brevo email sending failed. StatusCode: {StatusCode}. Body: {Body}",
+                    response.StatusCode,
+                    errorBody);
+
+                throw new InvalidOperationException(
+                    "Не вдалося надіслати email через Brevo.");
+            }
 
             this.logger.LogInformation("Email sent to {Email}", toEmail);
         }
