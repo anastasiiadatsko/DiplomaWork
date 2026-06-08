@@ -9,132 +9,117 @@
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#16a34a" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="HabitFlow" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #f0fdf4;
-        }
-
-        .navbar {
-            background: white;
-            padding: 14px 32px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 1px 8px rgba(0,0,0,0.06);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .logo {
-            font-size: 20px;
-            font-weight: 700;
-            color: #16a34a;
-            text-decoration: none;
-        }
-
-            .logo:hover {
-                color: #16a34a;
+            body {
+                font-family: 'Inter', sans-serif;
+                background: #f0fdf4;
             }
 
-        .nav-links {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-        }
+            .navbar {
+                background: white;
+                padding: 14px 32px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+                position: sticky;
+                top: 0;
+                z-index: 100;
+            }
 
-        .nav-link {
-            font-size: 14px;
-            color: #374151 !important;
-            text-decoration: none;
-            font-weight: 500;
-            padding: 7px 14px;
-            border-radius: 8px;
-            transition: background 0.15s;
-        }
+            .logo {
+                font-size: 20px;
+                font-weight: 700;
+                color: #16a34a;
+                text-decoration: none;
+            }
 
-            .nav-link:hover {
+                .logo:hover {
+                    color: #16a34a;
+                }
+
+            .nav-links {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
+            .nav-link {
+                font-size: 14px;
+                color: #374151 !important;
+                text-decoration: none;
+                font-weight: 500;
+                padding: 7px 14px;
+                border-radius: 8px;
+                transition: background 0.15s;
+            }
+
+                .nav-link:hover {
+                    background: #f3f4f6;
+                    color: #374151 !important;
+                }
+
+                .nav-link.active {
+                    background: #dcfce7;
+                    color: #16a34a !important;
+                }
+
+            .btn-logout {
+                padding: 8px 16px;
                 background: #f3f4f6;
                 color: #374151 !important;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 500;
+                text-decoration: none;
             }
 
-            .nav-link.active {
-                background: #dcfce7;
+                .btn-logout:hover {
+                    background: #e5e7eb;
+                    color: #374151 !important;
+                }
+
+            .btn-register {
+                background: #16a34a;
+                color: white !important;
+                border-radius: 8px;
+                padding: 8px 18px !important;
+                font-weight: 600 !important;
+            }
+
+                .btn-register:hover {
+                    background: #15803d;
+                }
+
+            .btn-login {
+                border: 1.5px solid #16a34a;
                 color: #16a34a !important;
+                border-radius: 8px;
+                padding: 7px 18px !important;
+                font-weight: 600 !important;
             }
 
-        .btn-logout {
-            padding: 8px 16px;
-            background: #f3f4f6;
-            color: #374151 !important;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            text-decoration: none;
-        }
-
-            .btn-logout:hover {
-                background: #e5e7eb;
+            .btn-logout {
+                padding: 8px 16px !important;
+                background: #f3f4f6;
                 color: #374151 !important;
+                border-radius: 8px;
+                font-size: 13px;
+                font-weight: 500;
+                text-decoration: none;
             }
 
-        .btn-register {
-            background: #16a34a;
-            color: white !important;
-            border-radius: 8px;
-            padding: 8px 18px !important;
-            font-weight: 600 !important;
-        }
-
-            .btn-register:hover {
-                background: #15803d;
+            .profile-link {
+                display: flex;
+                align-items: center;
+                gap: 6px;
             }
-
-        .btn-login {
-            border: 1.5px solid #16a34a;
-            color: #16a34a !important;
-            border-radius: 8px;
-            padding: 7px 18px !important;
-            font-weight: 600 !important;
-        }
-
-        .btn-register {
-            background: #16a34a;
-            color: white !important;
-            border-radius: 8px;
-            padding: 8px 18px !important;
-            font-weight: 600 !important;
-        }
-
-            .btn-register:hover {
-                background: #15803d;
-            }
-
-        .btn-login {
-            border: 1.5px solid #16a34a;
-            color: #16a34a !important;
-            border-radius: 8px;
-            padding: 7px 18px !important;
-            font-weight: 600 !important;
-        }
-
-        .btn-logout {
-            padding: 8px 16px !important;
-            background: #f3f4f6;
-            color: #374151 !important;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 500;
-            text-decoration: none;
-        }
-
-        .profile-link {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
     </style>
 </head>
 
@@ -162,7 +147,7 @@
                     <a asp-controller="BalanceConstellation"
                        asp-action="Index"
                        class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "BalanceConstellation" ? "active" : "")">
-                        ✨ Сузір’я балансу
+                        ✨ Сузір'я балансу
                     </a>
 
                     <a asp-controller="Coach"
@@ -176,7 +161,6 @@
                        class="nav-link @(ViewContext.RouteData.Values["controller"]?.ToString() == "Profile" ? "active" : "")">
                         👤 @Context.Session.GetString("UserName")
                     </a>
-
 
                     <a asp-controller="Auth"
                        asp-action="Logout"
@@ -212,5 +196,10 @@
 
     @await RenderSectionAsync("Scripts", required: false)
 
+    <script>
+        if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/service-worker.js');
+        }
+    </script>
 </body>
 </html>
