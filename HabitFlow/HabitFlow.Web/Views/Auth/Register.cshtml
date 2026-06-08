@@ -256,6 +256,9 @@
         }
 
     </style>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#16a34a" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 </head>
 <body>
     <div class="page-wrapper">
@@ -316,5 +319,10 @@
             </form>
         </div>
     </div>
+    <script>
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/service-worker.js');
+            }
+    </script>
 </body>
 </html>

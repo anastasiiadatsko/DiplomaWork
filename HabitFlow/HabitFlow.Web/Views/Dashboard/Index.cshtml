@@ -1018,6 +1018,10 @@
         }
 
     </style>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#16a34a" />
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" href="/icons/icon-192x192.png" />
 </head>
 <body>
 
@@ -1353,6 +1357,10 @@
                 } catch (e) { console.error('Error:', e); }
             }
     </script>
-
+    <script>
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.register('/service-worker.js');
+            }
+    </script>
 </body>
 </html>
