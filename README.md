@@ -21,3 +21,7 @@ Update-Database -Project HabitFlow.DAL -StartupProject HabitFlow.Web
 
 5. Відкрий у браузері
 https://localhost:7060
+
+
+Вебзастосунок доступний за посиланням:  
+https://habitflow-csl9.onrender.com/
